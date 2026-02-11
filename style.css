@@ -612,6 +612,7 @@ footer a {
 
 .slider-container input[type="range"] {
     flex: 1;
+    appearance: none;
     -webkit-appearance: none;
     height: 4px;
     background: linear-gradient(to right, var(--accent) 0%, rgba(255, 255, 255, 0.1) 100%);
@@ -620,6 +621,7 @@ footer a {
 }
 
 .slider-container input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
     -webkit-appearance: none;
     width: 18px;
     height: 18px;
@@ -978,6 +980,75 @@ footer a {
     justify-content: center;
     min-width: 200px;
     max-width: 320px;
+    height: 100%;
+}
+
+/* Fullscreen Adjust Panel */
+.fs-adjust-panel {
+    width: 100%;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius);
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: auto;
+}
+
+.fs-adjust-header {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.fs-tune-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.fs-tune-item label {
+    font-size: 0.85rem;
+    color: var(--text);
+    display: flex;
+    justify-content: space-between;
+}
+
+.fs-tune-item label span {
+    font-weight: 700;
+    color: var(--indigo-light);
+}
+
+.fs-tune-item input[type="range"] {
+    appearance: none;
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    outline: none;
+}
+
+.fs-tune-item input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: var(--indigo);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+    transition: transform 0.2s;
+}
+
+.fs-tune-item input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
 }
 
 .fs-streak {

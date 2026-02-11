@@ -270,31 +270,48 @@
                             <span class="fs-stat-value" id="fsStatOver">—</span>
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- Bottom: Controls (hover to show) -->
-            <div class="fs-controls">
-                <button class="btn btn-primary fs-start-btn" id="fsStartBtn" onclick="toggleRecording()">
-                    <span id="fsStartLabel">Stoppa</span>
-                </button>
-                <div class="fs-phase-bar" id="fsPhaseBar">
-                    <button class="phase-btn fs-phase-btn" data-phase="none" onclick="setPhase('none')"><img
-                            src="icons/pause.png" alt="" class="fs-phase-icon"></button>
-                    <button class="phase-btn fs-phase-btn" data-phase="lecture" onclick="setPhase('lecture')"><img
-                            src="icons/lecture.png" alt="" class="fs-phase-icon"></button>
-                    <button class="phase-btn fs-phase-btn" data-phase="quiet" onclick="setPhase('quiet')">
-                        <svg class="fs-phase-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                            <path d="m15 5 4 4" />
-                        </svg>
-                    </button>
-                    <button class="phase-btn fs-phase-btn" data-phase="discussion" onclick="setPhase('discussion')"><img
-                            src="icons/discussion.png" alt="" class="fs-phase-icon"></button>
+                    <div class="fs-adjust-panel" id="fsAdjustPanel">
+                        <div class="fs-adjust-header">FINJUSTERA</div>
+                        <div class="fs-tune-item">
+                            <label>Tyst arbete <span id="fsVal-quiet">0</span></label>
+                            <input type="range" id="fsTune-quiet" min="-10" max="10" value="0">
+                        </div>
+                        <div class="fs-tune-item">
+                            <label>Genomgång <span id="fsVal-lecture">0</span></label>
+                            <input type="range" id="fsTune-lecture" min="-10" max="10" value="0">
+                        </div>
+                        <div class="fs-tune-item">
+                            <label>Diskussion <span id="fsVal-discussion">0</span></label>
+                            <input type="range" id="fsTune-discussion" min="-10" max="10" value="0">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Bottom: Controls (hover to show) -->
+        <div class="fs-controls">
+            <button class="btn btn-primary fs-start-btn" id="fsStartBtn" onclick="toggleRecording()">
+                <span id="fsStartLabel">Stoppa</span>
+            </button>
+            <div class="fs-phase-bar" id="fsPhaseBar">
+                <button class="phase-btn fs-phase-btn" data-phase="none" onclick="setPhase('none')"><img
+                        src="icons/pause.png" alt="" class="fs-phase-icon"></button>
+                <button class="phase-btn fs-phase-btn" data-phase="lecture" onclick="setPhase('lecture')"><img
+                        src="icons/lecture.png" alt="" class="fs-phase-icon"></button>
+                <button class="phase-btn fs-phase-btn" data-phase="quiet" onclick="setPhase('quiet')">
+                    <svg class="fs-phase-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                        <path d="m15 5 4 4" />
+                    </svg>
+                </button>
+                <button class="phase-btn fs-phase-btn" data-phase="discussion" onclick="setPhase('discussion')"><img
+                        src="icons/discussion.png" alt="" class="fs-phase-icon"></button>
+            </div>
+        </div>
+    </div>
     </div>
 
     <!-- ===== SESSION REPORT OVERLAY ===== -->

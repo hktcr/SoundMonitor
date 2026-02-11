@@ -1,5 +1,5 @@
 // ============================================================
-// LJUDMONITOR v2.1 — App Logic
+// LJUDMONITOR v2.6 — App Logic
 // ============================================================
 
 // ---- STATE ----
@@ -8,7 +8,15 @@ let isRecording = false, animFrameId = null, updateInterval = null;
 
 const HISTORY_LENGTH = 120;
 const SAMPLE_INTERVAL = 500;
-let volumeHistory = [], phaseMarkers = [];
+const historyLevels = new Float32Array(HISTORY_LENGTH);
+const historyPhases = new Int8Array(HISTORY_LENGTH);
+const historyTimes = new Float64Array(HISTORY_LENGTH);
+let historyIndex = 0;
+let historyCount = 0;
+let phaseMarkers = [];
+
+const PHASE_TO_ID = { none: 0, lecture: 1, quiet: 2, discussion: 3 };
+const ID_TO_PHASE = ['none', 'lecture', 'quiet', 'discussion'];
 let threshold = 50, calibrationOffset = 0;  // Lowered from 65 to 50 dB
 let peakLevel = 0, totalSamples = 0, totalSum = 0, overThresholdCount = 0;
 
@@ -114,6 +122,7 @@ function init() {
 
     // Setup fine-tuning sliders
     setupTuneSliders();
+    updateTuneDisplays();
 
     setPhase('none');
     drawGraph();
@@ -245,8 +254,13 @@ function sampleVolume() {
     const level = rmsToDb(getRMS());
     const effectiveThreshold = getEffectiveThreshold();
 
-    volumeHistory.push({ level, phase: currentPhase, time: Date.now() });
-    if (volumeHistory.length > HISTORY_LENGTH) volumeHistory.shift();
+    // Circular Buffer update
+    historyLevels[historyIndex] = level;
+    historyPhases[historyIndex] = PHASE_TO_ID[currentPhase] || 0;
+    historyTimes[historyIndex] = Date.now();
+
+    historyIndex = (historyIndex + 1) % HISTORY_LENGTH;
+    if (historyCount < HISTORY_LENGTH) historyCount++;
 
     totalSamples++; totalSum += level;
     if (level > peakLevel) peakLevel = level;
@@ -527,6 +541,7 @@ function animate() {
 }
 
 // ---- GRAPH ----
+// ---- GRAPH ----
 function drawGraph() {
     const w = graphCanvas.getBoundingClientRect().width;
     const h = graphCanvas.getBoundingClientRect().height;
@@ -544,28 +559,28 @@ function drawGraph() {
         graphCtx.fillText(100 - i * 25, 4, (i / 4) * h + (i === 0 ? 8 : i === 4 ? -4 : 0));
     }
 
-    if (volumeHistory.length < 2) {
+    if (historyCount < 2) {
         drawThresholdLine(w, h);
         return;
     }
 
-    const dataLen = volumeHistory.length;
     const xStep = w / (HISTORY_LENGTH - 1);
-    const startX = w - (dataLen - 1) * xStep;
+    const startX = w - (historyCount - 1) * xStep;
 
-    // Phase background zones — tinted columns with subtle border
-    let lastPhase = volumeHistory[0].phase, zoneStart = 0;
-    for (let i = 1; i <= dataLen; i++) {
-        const p = i < dataLen ? volumeHistory[i].phase : null;
-        if (p !== lastPhase || i === dataLen) {
+    // Phase background zones
+    let firstIdx = (historyIndex - historyCount + HISTORY_LENGTH) % HISTORY_LENGTH;
+    let lastPhase = ID_TO_PHASE[historyPhases[firstIdx]];
+    let zoneStart = 0;
+
+    for (let i = 1; i <= historyCount; i++) {
+        let pIdx = (historyIndex - historyCount + i + HISTORY_LENGTH) % HISTORY_LENGTH;
+        const p = i < historyCount ? ID_TO_PHASE[historyPhases[pIdx]] : null;
+        if (p !== lastPhase || i === historyCount) {
             if (lastPhase !== 'none' && PHASE_COLORS[lastPhase]) {
                 const x1 = startX + zoneStart * xStep;
                 const x2 = startX + (i - 1) * xStep + xStep;
-                const zoneW = x2 - x1;
-                // Background fill
                 graphCtx.fillStyle = PHASE_COLORS[lastPhase].bg;
-                graphCtx.fillRect(x1, 0, zoneW, h);
-                // Left border line
+                graphCtx.fillRect(x1, 0, x2 - x1, h);
                 graphCtx.strokeStyle = PHASE_COLORS[lastPhase].line;
                 graphCtx.lineWidth = 1.5;
                 graphCtx.setLineDash([4, 4]);
@@ -581,32 +596,34 @@ function drawGraph() {
     gradient.addColorStop(0, 'rgba(99,102,241,0.25)');
     gradient.addColorStop(1, 'rgba(99,102,241,0.0)');
     graphCtx.beginPath(); graphCtx.moveTo(startX, h);
-    for (let i = 0; i < dataLen; i++) {
-        const x = startX + i * xStep, y = h - (volumeHistory[i].level / 100) * h;
+    for (let i = 0; i < historyCount; i++) {
+        let currIdx = (historyIndex - historyCount + i + HISTORY_LENGTH) % HISTORY_LENGTH;
+        const x = startX + i * xStep, y = h - (historyLevels[currIdx] / 100) * h;
         if (i === 0) graphCtx.lineTo(x, y);
         else {
-            const px = startX + (i - 1) * xStep, py = h - (volumeHistory[i - 1].level / 100) * h;
+            let prevIdx = (historyIndex - historyCount + i - 1 + HISTORY_LENGTH) % HISTORY_LENGTH;
+            const px = startX + (i - 1) * xStep, py = h - (historyLevels[prevIdx] / 100) * h;
             const cpx = (px + x) / 2;
             graphCtx.bezierCurveTo(cpx, py, cpx, y, x, y);
         }
     }
-    graphCtx.lineTo(startX + (dataLen - 1) * xStep, h); graphCtx.closePath();
+    graphCtx.lineTo(startX + (historyCount - 1) * xStep, h); graphCtx.closePath();
     graphCtx.fillStyle = gradient; graphCtx.fill();
 
-    // Line segments colored by threshold
+    // Line segments
     const et = getEffectiveThreshold();
-    for (let i = 1; i < dataLen; i++) {
-        const x1 = startX + (i - 1) * xStep, y1 = h - (volumeHistory[i - 1].level / 100) * h;
-        const x2 = startX + i * xStep, y2 = h - (volumeHistory[i].level / 100) * h;
-        const val = volumeHistory[i].level;
+    for (let i = 1; i < historyCount; i++) {
+        let prevIdx = (historyIndex - historyCount + i - 1 + HISTORY_LENGTH) % HISTORY_LENGTH;
+        let currIdx = (historyIndex - historyCount + i + HISTORY_LENGTH) % HISTORY_LENGTH;
+        const x1 = startX + (i - 1) * xStep, y1 = h - (historyLevels[prevIdx] / 100) * h;
+        const x2 = startX + i * xStep, y2 = h - (historyLevels[currIdx] / 100) * h;
+        const val = historyLevels[currIdx];
         graphCtx.strokeStyle = val > et ? 'rgba(239,68,68,0.9)' : val > et * 0.8 ? 'rgba(245,158,11,0.9)' : 'rgba(99,102,241,0.9)';
         graphCtx.lineWidth = 2.5;
-        graphCtx.beginPath();
-        graphCtx.moveTo(x1, y1);
+        graphCtx.beginPath(); graphCtx.moveTo(x1, y1);
         graphCtx.bezierCurveTo((x1 + x2) / 2, y1, (x1 + x2) / 2, y2, x2, y2);
         graphCtx.stroke();
     }
-
     drawThresholdLine(w, h);
 }
 
@@ -617,7 +634,6 @@ function drawFullscreenGraph() {
     const ctx = canvas.getContext('2d');
     const w = canvas.width = canvas.getBoundingClientRect().width;
     const h = canvas.height = canvas.getBoundingClientRect().height;
-
     ctx.clearRect(0, 0, w, h);
 
     // Grid
@@ -632,40 +648,33 @@ function drawFullscreenGraph() {
         ctx.fillText(100 - i * 25, 8, (i / 4) * h + (i === 0 ? 12 : i === 4 ? -8 : 0));
     }
 
-    if (volumeHistory.length < 2) {
-        // Draw threshold line
+    if (historyCount < 2) {
         const et = getEffectiveThreshold();
         if (et !== null) {
             const ty = h - (et / 100) * h;
-            ctx.strokeStyle = 'rgba(239,68,68,0.8)';
-            ctx.lineWidth = 3;
-            ctx.setLineDash([8, 8]);
-            ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(w, ty); ctx.stroke();
-            ctx.setLineDash([]);
+            ctx.strokeStyle = 'rgba(239,68,68,0.8)'; ctx.lineWidth = 3;
+            ctx.setLineDash([8, 8]); ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(w, ty); ctx.stroke(); ctx.setLineDash([]);
         }
         return;
     }
 
-    const dataLen = volumeHistory.length;
     const xStep = w / (HISTORY_LENGTH - 1);
-    const startX = w - (dataLen - 1) * xStep;
+    const startX = w - (historyCount - 1) * xStep;
 
     // Phase background zones
-    let lastPhase = volumeHistory[0].phase, zoneStart = 0;
-    for (let i = 1; i <= dataLen; i++) {
-        const p = i < dataLen ? volumeHistory[i].phase : null;
-        if (p !== lastPhase || i === dataLen) {
+    let firstIdx = (historyIndex - historyCount + HISTORY_LENGTH) % HISTORY_LENGTH;
+    let lastPhase = ID_TO_PHASE[historyPhases[firstIdx]];
+    let zoneStart = 0;
+    for (let i = 1; i <= historyCount; i++) {
+        let pIdx = (historyIndex - historyCount + i + HISTORY_LENGTH) % HISTORY_LENGTH;
+        const p = i < historyCount ? ID_TO_PHASE[historyPhases[pIdx]] : null;
+        if (p !== lastPhase || i === historyCount) {
             if (lastPhase !== 'none' && PHASE_COLORS[lastPhase]) {
                 const x1 = startX + zoneStart * xStep;
                 const x2 = startX + (i - 1) * xStep + xStep;
-                const zoneW = x2 - x1;
-                ctx.fillStyle = PHASE_COLORS[lastPhase].bg;
-                ctx.fillRect(x1, 0, zoneW, h);
-                ctx.strokeStyle = PHASE_COLORS[lastPhase].line;
-                ctx.lineWidth = 2;
-                ctx.setLineDash([6, 6]);
-                ctx.beginPath(); ctx.moveTo(x1, 0); ctx.lineTo(x1, h); ctx.stroke();
-                ctx.setLineDash([]);
+                ctx.fillStyle = PHASE_COLORS[lastPhase].bg; ctx.fillRect(x1, 0, x2 - x1, h);
+                ctx.strokeStyle = PHASE_COLORS[lastPhase].line; ctx.lineWidth = 2;
+                ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(x1, 0); ctx.lineTo(x1, h); ctx.stroke(); ctx.setLineDash([]);
             }
             zoneStart = i; lastPhase = p;
         }
@@ -676,47 +685,41 @@ function drawFullscreenGraph() {
     gradient.addColorStop(0, 'rgba(99,102,241,0.3)');
     gradient.addColorStop(1, 'rgba(99,102,241,0.0)');
     ctx.beginPath(); ctx.moveTo(startX, h);
-    for (let i = 0; i < dataLen; i++) {
-        const x = startX + i * xStep, y = h - (volumeHistory[i].level / 100) * h;
+    for (let i = 0; i < historyCount; i++) {
+        let currIdx = (historyIndex - historyCount + i + HISTORY_LENGTH) % HISTORY_LENGTH;
+        const x = startX + i * xStep, y = h - (historyLevels[currIdx] / 100) * h;
         if (i === 0) ctx.lineTo(x, y);
         else {
-            const px = startX + (i - 1) * xStep, py = h - (volumeHistory[i - 1].level / 100) * h;
+            let prevIdx = (historyIndex - historyCount + i - 1 + HISTORY_LENGTH) % HISTORY_LENGTH;
+            const px = startX + (i - 1) * xStep, py = h - (historyLevels[prevIdx] / 100) * h;
             const cpx = (px + x) / 2;
             ctx.bezierCurveTo(cpx, py, cpx, y, x, y);
         }
     }
-    ctx.lineTo(startX + (dataLen - 1) * xStep, h); ctx.closePath();
+    ctx.lineTo(startX + (historyCount - 1) * xStep, h); ctx.closePath();
     ctx.fillStyle = gradient; ctx.fill();
 
-    // Line segments colored by threshold
+    // Line segments
     const et = getEffectiveThreshold();
-    for (let i = 1; i < dataLen; i++) {
-        const x1 = startX + (i - 1) * xStep, y1 = h - (volumeHistory[i - 1].level / 100) * h;
-        const x2 = startX + i * xStep, y2 = h - (volumeHistory[i].level / 100) * h;
-        const val = volumeHistory[i].level;
+    for (let i = 1; i < historyCount; i++) {
+        let prevIdx = (historyIndex - historyCount + i - 1 + HISTORY_LENGTH) % HISTORY_LENGTH;
+        let currIdx = (historyIndex - historyCount + i + HISTORY_LENGTH) % HISTORY_LENGTH;
+        const x1 = startX + (i - 1) * xStep, y1 = h - (historyLevels[prevIdx] / 100) * h;
+        const x2 = startX + i * xStep, y2 = h - (historyLevels[currIdx] / 100) * h;
+        const val = historyLevels[currIdx];
         ctx.strokeStyle = val > et ? 'rgba(239,68,68,0.95)' : val > et * 0.8 ? 'rgba(245,158,11,0.95)' : 'rgba(99,102,241,0.95)';
         ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
+        ctx.beginPath(); ctx.moveTo(x1, y1);
         ctx.bezierCurveTo((x1 + x2) / 2, y1, (x1 + x2) / 2, y2, x2, y2);
         ctx.stroke();
     }
 
-    // Threshold line (prominent)
     if (et !== null) {
         const ty = h - (et / 100) * h;
-        ctx.strokeStyle = 'rgba(239,68,68,0.9)';
-        ctx.lineWidth = 3;
-        ctx.setLineDash([10, 10]);
-        ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(w, ty); ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Threshold label
-        ctx.fillStyle = 'rgba(239,68,68,0.9)';
-        ctx.font = 'bold 16px Inter, sans-serif';
-        ctx.textAlign = 'right';
-        ctx.fillText('Tröskel: ' + et + ' dB', w - 12, ty - 10);
-        ctx.textAlign = 'left';  // reset
+        ctx.strokeStyle = 'rgba(239,68,68,0.9)'; ctx.lineWidth = 3;
+        ctx.setLineDash([10, 10]); ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(w, ty); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle = 'rgba(239,68,68,0.9)'; ctx.font = 'bold 16px Inter, sans-serif'; ctx.textAlign = 'right';
+        ctx.fillText('Tröskel: ' + et + ' dB', w - 12, ty - 10); ctx.textAlign = 'left';
     }
 }
 
@@ -824,7 +827,12 @@ async function calibrate() {
 
 // ---- RESET ----
 function resetStats() {
-    volumeHistory = []; phaseMarkers = [];
+    historyIndex = 0;
+    historyCount = 0;
+    historyLevels.fill(0);
+    historyPhases.fill(0);
+    historyTimes.fill(0);
+    phaseMarkers = [];
     peakLevel = 0; totalSamples = 0; totalSum = 0; overThresholdCount = 0;
     statAvg.textContent = statPeak.textContent = statOver.textContent = '—';
     statAvg.className = statPeak.className = statOver.className = 'stat-value';
@@ -854,7 +862,18 @@ function buildSessionData() {
         const last = sessionPhaseLog[sessionPhaseLog.length - 1];
         if (!last.end) last.end = Date.now();
     }
-    const levels = volumeHistory.map(v => v.level);
+
+    const history = [];
+    for (let i = 0; i < historyCount; i++) {
+        let idx = (historyIndex - historyCount + i + HISTORY_LENGTH) % HISTORY_LENGTH;
+        history.push({
+            level: historyLevels[idx],
+            phase: ID_TO_PHASE[historyPhases[idx]],
+            time: historyTimes[idx]
+        });
+    }
+
+    const levels = history.map(v => v.level);
     const avg = levels.length > 0 ? levels.reduce((a, b) => a + b, 0) / levels.length : 0;
     const peak = levels.length > 0 ? Math.max(...levels) : 0;
     const et = getEffectiveThreshold();
@@ -870,7 +889,7 @@ function buildSessionData() {
             phase: p.phase, label: PHASE_LABELS[p.phase],
             duration: (p.end || Date.now()) - p.start
         })),
-        history: volumeHistory.slice()
+        history: history
     };
 }
 
@@ -1001,39 +1020,49 @@ function updateTuneDisplays() {
     const tuneLectureValue = $('tuneLectureValue');
     const tuneDiscussionValue = $('tuneDiscussionValue');
 
-    if (tuneQuietValue) tuneQuietValue.textContent = (PHASE_THRESHOLDS.quiet + phaseAdjustments.quiet) + ' dB';
-    if (tuneLectureValue) tuneLectureValue.textContent = (PHASE_THRESHOLDS.lecture + phaseAdjustments.lecture) + ' dB';
-    if (tuneDiscussionValue) tuneDiscussionValue.textContent = (PHASE_THRESHOLDS.discussion + phaseAdjustments.discussion) + ' dB';
+    const qVal = (PHASE_THRESHOLDS.quiet + phaseAdjustments.quiet);
+    const lVal = (PHASE_THRESHOLDS.lecture + phaseAdjustments.lecture);
+    const dVal = (PHASE_THRESHOLDS.discussion + phaseAdjustments.discussion);
+
+    if (tuneQuietValue) tuneQuietValue.textContent = qVal + ' dB';
+    if (tuneLectureValue) tuneLectureValue.textContent = lVal + ' dB';
+    if (tuneDiscussionValue) tuneDiscussionValue.textContent = dVal + ' dB';
+
+    // Update Fullscreen displays
+    if ($('fsVal-quiet')) $('fsVal-quiet').textContent = phaseAdjustments.quiet > 0 ? '+' + phaseAdjustments.quiet : phaseAdjustments.quiet;
+    if ($('fsVal-lecture')) $('fsVal-lecture').textContent = phaseAdjustments.lecture > 0 ? '+' + phaseAdjustments.lecture : phaseAdjustments.lecture;
+    if ($('fsVal-discussion')) $('fsVal-discussion').textContent = phaseAdjustments.discussion > 0 ? '+' + phaseAdjustments.discussion : phaseAdjustments.discussion;
+
+    // Sync input values (main <-> fullscreen)
+    if ($('fsTune-quiet')) $('fsTune-quiet').value = phaseAdjustments.quiet;
+    if ($('fsTune-lecture')) $('fsTune-lecture').value = phaseAdjustments.lecture;
+    if ($('fsTune-discussion')) $('fsTune-discussion').value = phaseAdjustments.discussion;
+
+    if ($('tuneQuiet')) $('tuneQuiet').value = phaseAdjustments.quiet;
+    if ($('tuneLecture')) $('tuneLecture').value = phaseAdjustments.lecture;
+    if ($('tuneDiscussion')) $('tuneDiscussion').value = phaseAdjustments.discussion;
 }
 
 function setupTuneSliders() {
-    const tuneQuiet = $('tuneQuiet');
-    const tuneLecture = $('tuneLecture');
-    const tuneDiscussion = $('tuneDiscussion');
+    const sliders = [
+        { id: 'quiet', main: 'tuneQuiet', fs: 'fsTune-quiet' },
+        { id: 'lecture', main: 'tuneLecture', fs: 'fsTune-lecture' },
+        { id: 'discussion', main: 'tuneDiscussion', fs: 'fsTune-discussion' }
+    ];
 
-    if (tuneQuiet) {
-        tuneQuiet.addEventListener('input', (e) => {
-            phaseAdjustments.quiet = parseInt(e.target.value);
+    sliders.forEach(s => {
+        const handleInput = (e) => {
+            phaseAdjustments[s.id] = parseInt(e.target.value);
             updateTuneDisplays();
             localStorage.setItem('phaseAdjustments', JSON.stringify(phaseAdjustments));
-        });
-    }
+            // Immediate redraw to show threshold line move
+            drawGraph();
+            drawFullscreenGraph();
+        };
 
-    if (tuneLecture) {
-        tuneLecture.addEventListener('input', (e) => {
-            phaseAdjustments.lecture = parseInt(e.target.value);
-            updateTuneDisplays();
-            localStorage.setItem('phaseAdjustments', JSON.stringify(phaseAdjustments));
-        });
-    }
-
-    if (tuneDiscussion) {
-        tuneDiscussion.addEventListener('input', (e) => {
-            phaseAdjustments.discussion = parseInt(e.target.value);
-            updateTuneDisplays();
-            localStorage.setItem('phaseAdjustments', JSON.stringify(phaseAdjustments));
-        });
-    }
+        if ($(s.main)) $(s.main).addEventListener('input', handleInput);
+        if ($(s.fs)) $(s.fs).addEventListener('input', handleInput);
+    });
 }
 
 // ---- BOOT ----
