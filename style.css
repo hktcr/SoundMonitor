@@ -59,6 +59,31 @@ body.aurora-active .ambient-glow {
     opacity: 0;
 }
 
+/* Streak Break — red vignette pulse */
+body.streak-broken::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(220, 38, 38, 0.35) 100%);
+    animation: streak-break-pulse 2s ease-out forwards;
+}
+
+@keyframes streak-break-pulse {
+    0% {
+        opacity: 0;
+    }
+
+    15% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
 /* Aurora Canvas */
 .aurora-canvas {
     position: fixed;

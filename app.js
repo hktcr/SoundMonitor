@@ -276,6 +276,19 @@ function sampleVolume() {
         if (!streakActive && !graceTimeout) startStreak();
     }
 
+    // Update VU meter (at 500ms interval — smooth transitions)
+    vuValue.textContent = level.toFixed(0);
+    let cls = 'level-green', col = 'var(--green)';
+    if (level > effectiveThreshold) { cls = 'level-red'; col = 'var(--red)'; }
+    else if (level > effectiveThreshold * 0.8) { cls = 'level-orange'; col = 'var(--orange)'; }
+    vuRing.className = 'vu-ring ' + cls;
+    vuValue.style.color = col;
+
+    // Fullscreen VU mirror
+    const fsVu = $('fsVuValue'), fsRing = $('fsVuRing');
+    if (fsVu) { fsVu.textContent = level.toFixed(0); fsVu.style.color = col; }
+    if (fsRing) fsRing.className = 'vu-ring fs-vu-ring ' + cls;
+
     updateStats(level);
     updateStreakDisplay();
     updateSessionTime();
@@ -344,6 +357,9 @@ function handleStreakBreak() {
             streakActive = false; streakBroken = true;
             streakDisplay.classList.remove('on-fire');
             document.body.classList.remove('aurora-active');
+            // Brief red pulse feedback
+            document.body.classList.add('streak-broken');
+            setTimeout(() => document.body.classList.remove('streak-broken'), 2000);
             stopAurora();
         }
     }, GRACE_MS);
@@ -469,7 +485,7 @@ function setPhase(phase) {
     currentPhase = phase;
     if (isRecording && phase !== 'none') {
         sessionPhaseLog.push({ phase, start: Date.now() });
-        phaseMarkers.push({ phase, index: volumeHistory.length });
+        phaseMarkers.push({ phase, index: historyCount });
     }
 
     // Update all phase button states (both main and fullscreen)
@@ -521,21 +537,6 @@ function setPhase(phase) {
 // ---- ANIMATION ----
 function animate() {
     if (!isRecording) return;
-    const level = rmsToDb(getRMS());
-    const et = getEffectiveThreshold();
-
-    vuValue.textContent = level.toFixed(0);
-    let cls = 'level-green', col = 'var(--green)';
-    if (level > et) { cls = 'level-red'; col = 'var(--red)'; }
-    else if (level > et * 0.8) { cls = 'level-orange'; col = 'var(--orange)'; }
-    vuRing.className = 'vu-ring ' + cls;
-    vuValue.style.color = col;
-
-    // Fullscreen mirror
-    const fsVu = $('fsVuValue'), fsRing = $('fsVuRing');
-    if (fsVu) { fsVu.textContent = level.toFixed(0); fsVu.style.color = col; }
-    if (fsRing) fsRing.className = 'vu-ring fs-vu-ring ' + cls;
-
     updateStreakDisplay();
     animFrameId = requestAnimationFrame(animate);
 }
