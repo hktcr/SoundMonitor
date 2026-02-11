@@ -21,7 +21,7 @@
     <!-- ===== MAIN VIEW ===== -->
     <div class="container" id="mainView">
         <header>
-            <h1>🎙️ Ljudmonitor</h1>
+            <h1><img src="icons/microphone.png" alt="" class="header-icon"> Ljudmonitor</h1>
             <p>Klassrumsverktyg — mäter och loggar ljudvolym i realtid</p>
         </header>
 
@@ -37,7 +37,7 @@
                 </div>
                 <div class="stats-streak-col">
                     <div class="streak-display" id="streakDisplay">
-                        <div class="streak-icon">🔥</div>
+                        <img src="icons/fire.png" alt="" class="streak-icon-img">
                         <div class="streak-time" id="streakTime">0:00</div>
                         <div class="streak-label">STREAK</div>
                         <div class="streak-best" id="streakBest"></div>
@@ -75,17 +75,24 @@
             </div>
             <div class="phase-buttons">
                 <button class="phase-btn" data-phase="none" onclick="setPhase('none')" aria-label="Ingen fas">
-                    <span class="phase-icon">⏸️</span><span class="phase-text">Ingen</span>
+                    <img src="icons/pause.png" alt="" class="phase-icon-img"><span class="phase-text">Ingen</span>
                 </button>
                 <button class="phase-btn" data-phase="lecture" onclick="setPhase('lecture')" aria-label="Genomgång">
-                    <span class="phase-icon">📢</span><span class="phase-text">Genomgång</span>
+                    <img src="icons/lecture.png" alt="" class="phase-icon-img"><span class="phase-text">Genomgång</span>
                 </button>
                 <button class="phase-btn" data-phase="quiet" onclick="setPhase('quiet')" aria-label="Tyst arbete">
-                    <span class="phase-icon">✍️</span><span class="phase-text">Tyst arbete</span>
+                    <!-- SVG pencil icon for quiet work -->
+                    <svg class="phase-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                        <path d="m15 5 4 4" />
+                    </svg>
+                    <span class="phase-text">Tyst arbete</span>
                 </button>
                 <button class="phase-btn" data-phase="discussion" onclick="setPhase('discussion')"
                     aria-label="Diskussion">
-                    <span class="phase-icon">💬</span><span class="phase-text">Diskussion</span>
+                    <img src="icons/discussion.png" alt="" class="phase-icon-img"><span
+                        class="phase-text">Diskussion</span>
                 </button>
             </div>
         </div>
@@ -93,9 +100,17 @@
         <!-- Graph -->
         <div class="card graph-section">
             <div class="graph-header">
-                <span class="graph-title">📊 Volymhistorik</span>
+                <span class="graph-title">
+                    <svg class="inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round">
+                        <path d="M3 3v18h18" />
+                        <path d="m7 16 4-8 4 4 4-6" />
+                    </svg>
+                    Volymhistorik
+                </span>
                 <span class="graph-time" id="graphTimeLabel">Senaste 60 sekunder</span>
             </div>
+            <div class="graph-legend" id="graphLegend"></div>
             <canvas id="volumeGraph"></canvas>
         </div>
 
@@ -108,6 +123,7 @@
                         <input type="range" id="thresholdSlider" min="1" max="100" value="65">
                         <span class="slider-value" id="thresholdValue">65</span>
                     </div>
+                    <div class="threshold-hint" id="thresholdHint">Justeras automatiskt vid fasval</div>
                 </div>
                 <div class="control-group">
                     <span class="control-label">Varningsljud</span>
@@ -130,42 +146,82 @@
         <div class="card">
             <div class="action-bar">
                 <button class="btn btn-primary" id="startBtn" onclick="toggleRecording()">
-                    <span id="startIcon">▶</span>
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="6,3 20,12 6,21" />
+                    </svg>
                     <span id="startLabel">Starta mätning</span>
                 </button>
                 <button class="btn btn-calibrate" id="calibrateBtn" onclick="calibrate()" disabled>
-                    🎯 Kalibrera tyst nivå
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <circle cx="12" cy="12" r="6" />
+                        <circle cx="12" cy="12" r="2" />
+                    </svg>
+                    Kalibrera tyst nivå
                 </button>
                 <button class="btn btn-secondary" id="fullscreenBtn" onclick="enterFullscreen()">
-                    🖥️ Fullskärm
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round">
+                        <path
+                            d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+                    </svg>
+                    Fullskärm
                 </button>
                 <button class="btn btn-secondary" id="historyBtn" onclick="showHistory()">
-                    📋 Historik
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <path d="M14 2v6h6" />
+                        <path d="M16 13H8" />
+                        <path d="M16 17H8" />
+                    </svg>
+                    Historik
                 </button>
                 <button class="btn btn-secondary" id="resetBtn" onclick="resetStats()">
-                    ↺ Nollställ
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                        <path d="M3 3v5h5" />
+                    </svg>
+                    Nollställ
                 </button>
             </div>
             <p class="calibration-msg" id="calibrationMsg"></p>
         </div>
 
         <footer>
-            Ljudmonitor v2.0 — Del av <a href="#">GAIA Klassrumsverktyg</a> · Data sparas bara på denna dator
+            Ljudmonitor v2.1 — Del av <a href="#">GAIA Klassrumsverktyg</a> · Data sparas bara på denna dator
         </footer>
     </div>
 
     <!-- ===== FULLSCREEN VIEW ===== -->
     <div class="fullscreen-view hidden" id="fullscreenView">
-        <div class="fs-exit" onclick="exitFullscreen()" title="Avsluta fullskärm">✕</div>
-        <div class="fs-phase-bar" id="fsPhaseBar">
-            <button class="phase-btn fs-phase-btn" data-phase="none" onclick="setPhase('none')"><span
-                    class="phase-icon">⏸️</span></button>
-            <button class="phase-btn fs-phase-btn" data-phase="lecture" onclick="setPhase('lecture')"><span
-                    class="phase-icon">📢</span></button>
-            <button class="phase-btn fs-phase-btn" data-phase="quiet" onclick="setPhase('quiet')"><span
-                    class="phase-icon">✍️</span></button>
-            <button class="phase-btn fs-phase-btn" data-phase="discussion" onclick="setPhase('discussion')"><span
-                    class="phase-icon">💬</span></button>
+        <div class="fs-exit" onclick="exitFullscreen()" title="Avsluta fullskärm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                width="24" height="24">
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+            </svg>
+        </div>
+        <div class="fs-top-bar">
+            <div class="fs-phase-bar" id="fsPhaseBar">
+                <button class="phase-btn fs-phase-btn" data-phase="none" onclick="setPhase('none')"><img
+                        src="icons/pause.png" alt="" class="fs-phase-icon"></button>
+                <button class="phase-btn fs-phase-btn" data-phase="lecture" onclick="setPhase('lecture')"><img
+                        src="icons/lecture.png" alt="" class="fs-phase-icon"></button>
+                <button class="phase-btn fs-phase-btn" data-phase="quiet" onclick="setPhase('quiet')">
+                    <svg class="fs-phase-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                        <path d="m15 5 4 4" />
+                    </svg>
+                </button>
+                <button class="phase-btn fs-phase-btn" data-phase="discussion" onclick="setPhase('discussion')"><img
+                        src="icons/discussion.png" alt="" class="fs-phase-icon"></button>
+            </div>
+            <button class="btn btn-primary fs-start-btn" id="fsStartBtn" onclick="toggleRecording()">
+                <span id="fsStartLabel">Stoppa</span>
+            </button>
         </div>
         <div class="fs-content">
             <div class="fs-vu-container">
@@ -176,7 +232,7 @@
                 </div>
             </div>
             <div class="fs-streak" id="fsStreak">
-                <span class="fs-streak-icon">🔥</span>
+                <img src="icons/fire.png" alt="" class="fs-streak-icon-img">
                 <span class="fs-streak-time" id="fsStreakTime">0:00</span>
                 <span class="fs-streak-label">STREAK</span>
             </div>
@@ -187,15 +243,21 @@
     <div class="report-overlay hidden" id="reportOverlay">
         <div class="report-card">
             <div class="report-header">
-                <h2>📊 Sessionsrapport</h2>
-                <button class="report-close" onclick="closeReport()">✕</button>
+                <h2>Sessionsrapport</h2>
+                <button class="report-close" onclick="closeReport()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        width="20" height="20">
+                        <path d="M18 6 6 18" />
+                        <path d="m6 6 12 12" />
+                    </svg>
+                </button>
             </div>
             <div class="report-meta" id="reportMeta"></div>
             <canvas id="reportGraph" class="report-graph"></canvas>
             <div class="report-stats" id="reportStats"></div>
             <div class="report-phases" id="reportPhases"></div>
             <details class="report-reflection">
-                <summary>💭 Reflektion (valfritt)</summary>
+                <summary>Reflektion (valfritt)</summary>
                 <textarea id="reportReflection" placeholder="Hur upplevde du lektionen?" rows="3"></textarea>
                 <button class="btn btn-secondary" onclick="saveReflection()">Spara</button>
             </details>
@@ -209,8 +271,14 @@
     <div class="report-overlay hidden" id="historyOverlay">
         <div class="report-card history-card">
             <div class="report-header">
-                <h2>📋 Sessionshistorik</h2>
-                <button class="report-close" onclick="closeHistory()">✕</button>
+                <h2>Sessionshistorik</h2>
+                <button class="report-close" onclick="closeHistory()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        width="20" height="20">
+                        <path d="M18 6 6 18" />
+                        <path d="m6 6 12 12" />
+                    </svg>
+                </button>
             </div>
             <div class="history-list" id="historyList"></div>
             <div class="report-actions">

@@ -1,5 +1,5 @@
 // ============================================================
-// LJUDMONITOR v2.0 — App Logic
+// LJUDMONITOR v2.1 — App Logic
 // ============================================================
 
 // ---- STATE ----
@@ -17,11 +17,21 @@ let streakStart = null, streakActive = false, bestStreak = 0;
 let graceTimeout = null, streakBroken = false;
 const GRACE_MS = 2000;
 
-// Phase
+// Phase — thresholds are configurable defaults
 let currentPhase = 'none';
-const PHASE_THRESHOLDS = { none: null, lecture: null, quiet: 35, discussion: 65 };
-const PHASE_LABELS = { none: 'Ingen', lecture: '📢 Genomgång', quiet: '✍️ Tyst arbete', discussion: '💬 Diskussion' };
-const PHASE_COLORS = { none: 'rgba(99,102,241,0.3)', lecture: 'rgba(139,92,246,0.3)', quiet: 'rgba(34,197,94,0.3)', discussion: 'rgba(245,158,11,0.3)' };
+const PHASE_THRESHOLDS = {
+    none: null,      // Uses manual slider value
+    lecture: null,    // No auto-threshold — teacher talks, no student target
+    quiet: 35,       // Low ceiling: individual focus work
+    discussion: 65   // Higher ceiling: active group conversation
+};
+const PHASE_LABELS = { none: 'Ingen', lecture: 'Genomgång', quiet: 'Tyst arbete', discussion: 'Diskussion' };
+const PHASE_COLORS = {
+    none: { bg: 'rgba(99,102,241,0.15)', line: 'rgba(99,102,241,0.5)' },
+    lecture: { bg: 'rgba(139,92,246,0.15)', line: 'rgba(139,92,246,0.5)' },
+    quiet: { bg: 'rgba(34,197,94,0.15)', line: 'rgba(34,197,94,0.5)' },
+    discussion: { bg: 'rgba(245,158,11,0.15)', line: 'rgba(245,158,11,0.5)' }
+};
 
 // Warning sound
 let soundEnabled = false, lastWarningTime = 0;
@@ -42,11 +52,12 @@ const statusBadge = $('statusBadge'), statusText = $('statusText');
 const graphCanvas = $('volumeGraph'), graphCtx = graphCanvas.getContext('2d');
 const thresholdSlider = $('thresholdSlider'), thresholdValueEl = $('thresholdValue');
 const soundToggle = $('soundToggle');
-const startBtn = $('startBtn'), startIcon = $('startIcon'), startLabel = $('startLabel');
+const startBtn = $('startBtn'), startLabel = $('startLabel');
 const calibrateBtn = $('calibrateBtn'), calibrationMsg = $('calibrationMsg');
 const cooldownBar = $('cooldownBar'), cooldownFill = $('cooldownFill');
 const streakTimeEl = $('streakTime'), streakBestEl = $('streakBest'), streakDisplay = $('streakDisplay');
 const phaseHint = $('phaseHint');
+const thresholdHint = $('thresholdHint');
 
 // ---- INIT ----
 function init() {
@@ -64,10 +75,14 @@ function init() {
     if (saved) {
         const data = JSON.parse(saved);
         calibrationOffset = data.offset;
-        calibrationMsg.textContent = `✅ Kalibrering laddad (${data.date})`;
+        calibrationMsg.textContent = 'Kalibrering laddad (' + data.date + ')';
         calibrationMsg.className = 'calibration-msg success';
         setTimeout(() => { calibrationMsg.textContent = ''; }, 3000);
     }
+
+    // Load best streak
+    const savedBest = localStorage.getItem('soundmonitor_best_streak');
+    if (savedBest) bestStreak = parseInt(savedBest);
 
     // Init aurora canvas
     const ac = $('auroraCanvas');
@@ -82,8 +97,25 @@ function init() {
         else if (isRecording) enterFullscreen();
     });
 
+    // Build graph legend
+    buildGraphLegend();
+
     setPhase('none');
     drawGraph();
+}
+
+// ---- GRAPH LEGEND ----
+function buildGraphLegend() {
+    const legend = $('graphLegend');
+    if (!legend) return;
+    const items = [
+        { label: 'Genomgång', color: 'rgba(139,92,246,0.5)' },
+        { label: 'Tyst arbete', color: 'rgba(34,197,94,0.5)' },
+        { label: 'Diskussion', color: 'rgba(245,158,11,0.5)' }
+    ];
+    legend.innerHTML = items.map(i =>
+        `<div class="legend-item"><span class="legend-dot" style="background:${i.color}"></span>${i.label}</div>`
+    ).join('');
 }
 
 // ---- CANVAS ----
@@ -116,11 +148,16 @@ async function startRecording() {
         if (currentPhase !== 'none') sessionPhaseLog.push({ phase: currentPhase, start: Date.now() });
 
         startBtn.classList.add('active');
-        startIcon.textContent = '■';
+        // Update start button to show stop icon
+        startBtn.querySelector('svg').innerHTML = '<rect x="6" y="5" width="12" height="14" rx="1"/>';
         startLabel.textContent = 'Stoppa mätning';
         statusBadge.className = 'status-badge active';
         statusText.textContent = 'Mäter';
         calibrateBtn.disabled = false;
+
+        // Update fullscreen start button
+        const fsLabel = $('fsStartLabel');
+        if (fsLabel) fsLabel.textContent = 'Stoppa';
 
         resetStreak();
         streakStart = Date.now();
@@ -129,7 +166,7 @@ async function startRecording() {
         updateInterval = setInterval(sampleVolume, SAMPLE_INTERVAL);
         animate();
     } catch (err) {
-        calibrationMsg.textContent = '⚠️ Kunde inte komma åt mikrofonen.';
+        calibrationMsg.textContent = 'Kunde inte komma åt mikrofonen.';
         calibrationMsg.className = 'calibration-msg';
     }
 }
@@ -143,11 +180,27 @@ function stopRecording() {
     if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
 
     startBtn.classList.remove('active');
-    startIcon.textContent = '▶'; startLabel.textContent = 'Starta mätning';
+    // Restore play icon
+    startBtn.querySelector('svg').innerHTML = '<polygon points="6,3 20,12 6,21"/>';
+    startLabel.textContent = 'Starta mätning';
     statusBadge.className = 'status-badge inactive'; statusText.textContent = 'Inaktiv';
     calibrateBtn.disabled = true;
     document.body.classList.remove('alert-active', 'aurora-active');
     stopAurora();
+
+    // Update fullscreen start button
+    const fsLabel = $('fsStartLabel');
+    if (fsLabel) fsLabel.textContent = 'Starta';
+
+    // Save best streak
+    if (bestStreak > 0) {
+        localStorage.setItem('soundmonitor_best_streak', bestStreak.toString());
+    }
+
+    // Exit fullscreen if active
+    if (!$('fullscreenView').classList.contains('hidden')) {
+        exitFullscreen();
+    }
 
     if (sessionData && sessionData.totalSamples > 5) {
         saveSession(sessionData);
@@ -222,10 +275,9 @@ function startStreak() {
 
 function handleStreakBreak() {
     if (!streakActive) return;
-    if (graceTimeout) return; // Already in grace
+    if (graceTimeout) return;
     graceTimeout = setTimeout(() => {
         graceTimeout = null;
-        // Check if still over threshold
         const level = rmsToDb(getRMS());
         if (level > getEffectiveThreshold()) {
             const dur = Date.now() - streakStart;
@@ -240,7 +292,6 @@ function handleStreakBreak() {
 
 function resetStreak() {
     streakStart = Date.now(); streakActive = true; streakBroken = false;
-    bestStreak = 0;
     if (graceTimeout) { clearTimeout(graceTimeout); graceTimeout = null; }
 }
 
@@ -255,8 +306,8 @@ function updateStreakDisplay() {
 
     if (sec >= 10) {
         streakDisplay.classList.add('on-fire');
-        // Aurora intensifies with streak length
-        const intensity = Math.min(1, (sec - 10) / 120); // Full at 130s
+        // Aurora intensifies with streak length — full effect at 2 min
+        const intensity = Math.min(1, (sec - 10) / 110);
         updateAurora(intensity);
         document.body.classList.add('aurora-active');
     } else {
@@ -265,10 +316,11 @@ function updateStreakDisplay() {
         auroraIntensity = 0;
     }
 
-    const bestSec = Math.floor(bestStreak / 1000);
+    // Best streak display
+    const bestSec = Math.floor(Math.max(bestStreak, dur) / 1000);
     if (bestSec > 0) {
         const bm = Math.floor(bestSec / 60), bs = bestSec % 60;
-        streakBestEl.textContent = '🏆 ' + bm + ':' + String(bs).padStart(2, '0');
+        streakBestEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5C7 4 7 7 7 7"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5C17 4 17 7 17 7"/><path d="M4 22h16"/><path d="M10 22V8a4 4 0 0 0-4-4v0"/><path d="M14 22V8a4 4 0 0 1 4-4v0"/><path d="M10 8h4"/></svg> ' + bm + ':' + String(bs).padStart(2, '0');
     }
 }
 
@@ -287,20 +339,26 @@ function renderAurora() {
     if (auroraIntensity <= 0) { auroraAnimId = null; return; }
 
     const t = Date.now() / 3000;
-    const alpha = auroraIntensity * 0.25;
+    // Increased alpha range for better visibility (0.15 → 0.5)
+    const alpha = 0.15 + auroraIntensity * 0.35;
 
-    for (let i = 0; i < 3; i++) {
-        const grad = ctx.createLinearGradient(0, 0, w, h * 0.6);
-        const hue1 = (120 + i * 40 + t * 20) % 360;
-        const hue2 = (180 + i * 30 + t * 15) % 360;
-        grad.addColorStop(0, `hsla(${hue1}, 80%, 50%, ${alpha * 0.6})`);
-        grad.addColorStop(0.5, `hsla(${hue2}, 70%, 40%, ${alpha})`);
-        grad.addColorStop(1, `hsla(${hue1 + 60}, 60%, 30%, ${alpha * 0.3})`);
+    // Draw 4 aurora bands for richer effect
+    for (let i = 0; i < 4; i++) {
+        const grad = ctx.createLinearGradient(0, 0, w, h * 0.5);
+        const hue1 = (120 + i * 35 + t * 15) % 360;
+        const hue2 = (180 + i * 25 + t * 10) % 360;
+        grad.addColorStop(0, `hsla(${hue1}, 80%, 55%, ${alpha * 0.5})`);
+        grad.addColorStop(0.3, `hsla(${hue2}, 75%, 45%, ${alpha * 0.8})`);
+        grad.addColorStop(0.6, `hsla(${hue1 + 40}, 70%, 40%, ${alpha})`);
+        grad.addColorStop(1, `hsla(${hue2 + 60}, 60%, 30%, ${alpha * 0.2})`);
 
         ctx.beginPath();
-        for (let x = 0; x <= w; x += 4) {
-            const y = h * 0.2 + Math.sin(x / (150 + i * 50) + t + i) * (40 + auroraIntensity * 60)
-                + Math.sin(x / (80 + i * 30) + t * 1.5) * (20 + auroraIntensity * 30);
+        for (let x = 0; x <= w; x += 3) {
+            const baseY = h * (0.1 + i * 0.12);
+            const y = baseY
+                + Math.sin(x / (180 + i * 60) + t + i * 1.3) * (30 + auroraIntensity * 70)
+                + Math.sin(x / (90 + i * 40) + t * 1.3 + i) * (15 + auroraIntensity * 35)
+                + Math.cos(x / (250 + i * 30) + t * 0.7) * (10 + auroraIntensity * 20);
             if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
         ctx.lineTo(w, h); ctx.lineTo(0, h); ctx.closePath();
@@ -327,22 +385,33 @@ function setPhase(phase) {
     currentPhase = phase;
     if (isRecording && phase !== 'none') {
         sessionPhaseLog.push({ phase, start: Date.now() });
-        // Add marker to graph
         phaseMarkers.push({ phase, index: volumeHistory.length });
     }
 
-    // Update UI
+    // Update all phase button states (both main and fullscreen)
     document.querySelectorAll('.phase-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.phase === phase);
     });
     phaseHint.textContent = PHASE_LABELS[phase] || 'Ingen fas vald';
 
-    // Update threshold display if phase has default threshold
+    // Update threshold with phase-specific value
     const pt = PHASE_THRESHOLDS[phase];
     if (pt !== null && pt !== undefined) {
         thresholdValueEl.textContent = pt;
         thresholdSlider.value = pt;
         threshold = pt;
+        // Show threshold hint
+        if (thresholdHint) {
+            thresholdHint.textContent = PHASE_LABELS[phase] + ': tröskel ' + pt + ' dB';
+            thresholdHint.classList.add('visible');
+            setTimeout(() => thresholdHint.classList.remove('visible'), 3000);
+        }
+    } else {
+        if (thresholdHint) {
+            thresholdHint.textContent = 'Manuell tröskel';
+            thresholdHint.classList.add('visible');
+            setTimeout(() => thresholdHint.classList.remove('visible'), 2000);
+        }
     }
     drawGraph();
 }
@@ -396,16 +465,24 @@ function drawGraph() {
     const xStep = w / (HISTORY_LENGTH - 1);
     const startX = w - (dataLen - 1) * xStep;
 
-    // Phase background zones
+    // Phase background zones — tinted columns with subtle border
     let lastPhase = volumeHistory[0].phase, zoneStart = 0;
     for (let i = 1; i <= dataLen; i++) {
         const p = i < dataLen ? volumeHistory[i].phase : null;
         if (p !== lastPhase || i === dataLen) {
             if (lastPhase !== 'none' && PHASE_COLORS[lastPhase]) {
                 const x1 = startX + zoneStart * xStep;
-                const x2 = startX + (i - 1) * xStep;
-                graphCtx.fillStyle = PHASE_COLORS[lastPhase];
-                graphCtx.fillRect(x1, 0, x2 - x1 + xStep, h);
+                const x2 = startX + (i - 1) * xStep + xStep;
+                const zoneW = x2 - x1;
+                // Background fill
+                graphCtx.fillStyle = PHASE_COLORS[lastPhase].bg;
+                graphCtx.fillRect(x1, 0, zoneW, h);
+                // Left border line
+                graphCtx.strokeStyle = PHASE_COLORS[lastPhase].line;
+                graphCtx.lineWidth = 1.5;
+                graphCtx.setLineDash([4, 4]);
+                graphCtx.beginPath(); graphCtx.moveTo(x1, 0); graphCtx.lineTo(x1, h); graphCtx.stroke();
+                graphCtx.setLineDash([]);
             }
             zoneStart = i; lastPhase = p;
         }
@@ -491,7 +568,7 @@ function playChime() {
 async function calibrate() {
     if (!isRecording) return;
     calibrateBtn.classList.add('calibrating'); calibrateBtn.disabled = true;
-    calibrationMsg.textContent = '🎯 Kalibrerar... håll tyst i 3 sekunder';
+    calibrationMsg.textContent = 'Kalibrerar... håll tyst i 3 sekunder';
     calibrationMsg.className = 'calibration-msg';
     const samples = [];
     for (let i = 0; i < 30; i++) {
@@ -503,7 +580,7 @@ async function calibrate() {
         calibrationOffset = (samples.reduce((a, b) => a + b, 0) / samples.length) * 0.9;
         const dateStr = new Date().toLocaleDateString('sv-SE');
         localStorage.setItem('soundmonitor_calibration', JSON.stringify({ offset: calibrationOffset, date: dateStr }));
-        calibrationMsg.textContent = '✅ Kalibrering sparad!';
+        calibrationMsg.textContent = 'Kalibrering sparad!';
         calibrationMsg.className = 'calibration-msg success';
         resetStats();
     }
@@ -525,6 +602,9 @@ function resetStats() {
 function enterFullscreen() {
     $('mainView').classList.add('hidden');
     $('fullscreenView').classList.remove('hidden');
+    // Update fullscreen start button label
+    const fsLabel = $('fsStartLabel');
+    if (fsLabel) fsLabel.textContent = isRecording ? 'Stoppa' : 'Starta';
     document.documentElement.requestFullscreen?.();
 }
 function exitFullscreen() {
@@ -536,7 +616,6 @@ function exitFullscreen() {
 // ---- SESSION DATA ----
 function buildSessionData() {
     if (!sessionStartTime) return null;
-    // Close last phase
     if (sessionPhaseLog.length > 0) {
         const last = sessionPhaseLog[sessionPhaseLog.length - 1];
         if (!last.end) last.end = Date.now();
@@ -574,8 +653,9 @@ function showReport(data) {
     $('reportOverlay').classList.remove('hidden');
     const dur = Math.floor(data.duration / 1000);
     const dm = Math.floor(dur / 60), ds = dur % 60;
-    $('reportMeta').innerHTML = `<span>📅 ${new Date(data.date).toLocaleDateString('sv-SE')}</span>
-    <span>⏱️ ${dm}m ${ds}s</span><span>🎯 Tröskel: ${data.threshold}</span>`;
+    $('reportMeta').innerHTML = `<span class="meta-item"><svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg> ${new Date(data.date).toLocaleDateString('sv-SE')}</span>
+    <span class="meta-item"><svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> ${dm}m ${ds}s</span>
+    <span class="meta-item"><svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> Tröskel: ${data.threshold}</span>`;
 
     const bs = Math.floor(data.bestStreak / 1000);
     const bm = Math.floor(bs / 60), bss = bs % 60;
@@ -594,7 +674,6 @@ function showReport(data) {
             }).join('');
     } else { $('reportPhases').innerHTML = ''; }
 
-    // Draw report graph
     drawReportGraph(data);
 }
 
@@ -609,14 +688,22 @@ function drawReportGraph(data) {
     const hist = data.history;
     const xStep = w / (hist.length - 1);
 
-    // Phase zones
+    // Phase zones with tinted backgrounds
     let lp = hist[0].phase, zs = 0;
     for (let i = 1; i <= hist.length; i++) {
         const p = i < hist.length ? hist[i].phase : null;
         if (p !== lp || i === hist.length) {
             if (lp !== 'none' && PHASE_COLORS[lp]) {
-                ctx.fillStyle = PHASE_COLORS[lp];
-                ctx.fillRect(zs * xStep, 0, (i - zs) * xStep, h);
+                const zoneX = zs * xStep;
+                const zoneW = (i - zs) * xStep;
+                ctx.fillStyle = PHASE_COLORS[lp].bg;
+                ctx.fillRect(zoneX, 0, zoneW, h);
+                // Zone border
+                ctx.strokeStyle = PHASE_COLORS[lp].line;
+                ctx.lineWidth = 1;
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath(); ctx.moveTo(zoneX, 0); ctx.lineTo(zoneX, h); ctx.stroke();
+                ctx.setLineDash([]);
             }
             zs = i; lp = p;
         }
@@ -643,7 +730,7 @@ function saveReflection() {
     if (!text) return;
     const sessions = JSON.parse(localStorage.getItem('soundmonitor_sessions') || '[]');
     if (sessions.length > 0) { sessions[0].reflection = text; localStorage.setItem('soundmonitor_sessions', JSON.stringify(sessions)); }
-    calibrationMsg.textContent = '✅ Reflektion sparad'; calibrationMsg.className = 'calibration-msg success';
+    calibrationMsg.textContent = 'Reflektion sparad'; calibrationMsg.className = 'calibration-msg success';
     setTimeout(() => { calibrationMsg.textContent = ''; }, 3000);
 }
 
@@ -665,9 +752,10 @@ function showHistory() {
       </div>
       <div class="history-item-stats">
         <span>Snitt: ${s.avg}</span><span>Topp: ${s.peak}</span>
-        <span>Över: ${s.overPercent}%</span><span>🔥 ${Math.floor(bs / 60)}:${String(bs % 60).padStart(2, '0')}</span>
+        <span>Över: ${s.overPercent}%</span>
+        <span class="streak-mini"><img src="icons/fire.png" alt="" style="width:12px;height:12px"> ${Math.floor(bs / 60)}:${String(bs % 60).padStart(2, '0')}</span>
       </div>
-      ${s.reflection ? '<div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px">💭 ' + s.reflection + '</div>' : ''}
+      ${s.reflection ? '<div style="font-size:0.7rem;color:var(--text-muted);margin-top:4px;font-style:italic">' + s.reflection + '</div>' : ''}
     </div>`;
     }).join('');
 }
