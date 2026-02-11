@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="sv">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ljudmonitor — Klassrumsverktyg</title>
+    <meta name="description"
+        content="Realtids-ljudmonitor för klassrummet. Mäter och loggar ljudvolym med visuell graf, streak-counter och sessionsrapporter.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Aurora background -->
+    <canvas id="auroraCanvas" class="aurora-canvas"></canvas>
+    <div class="ambient-glow" id="ambientGlow"></div>
+
+    <!-- ===== MAIN VIEW ===== -->
+    <div class="container" id="mainView">
+        <header>
+            <h1>🎙️ Ljudmonitor</h1>
+            <p>Klassrumsverktyg — mäter och loggar ljudvolym i realtid</p>
+        </header>
+
+        <!-- VU Meter + Stats + Streak -->
+        <div class="card" id="vuCard">
+            <div class="vu-section">
+                <div class="vu-meter-container">
+                    <div class="vu-ring" id="vuRing"></div>
+                    <div class="vu-inner">
+                        <span class="vu-value" id="vuValue">—</span>
+                        <span class="vu-label">Relativ <span class="vu-unit">dB</span></span>
+                    </div>
+                </div>
+                <div class="stats-streak-col">
+                    <div class="streak-display" id="streakDisplay">
+                        <div class="streak-icon">🔥</div>
+                        <div class="streak-time" id="streakTime">0:00</div>
+                        <div class="streak-label">STREAK</div>
+                        <div class="streak-best" id="streakBest"></div>
+                    </div>
+                    <div class="stats-panel">
+                        <div class="stat-item">
+                            <span class="stat-label">Snitt</span>
+                            <span class="stat-value" id="statAvg">—</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Topp</span>
+                            <span class="stat-value" id="statPeak">—</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Över tröskel</span>
+                            <span class="stat-value" id="statOver">—</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Status</span>
+                            <span id="statusBadge" class="status-badge inactive">
+                                <span class="status-dot"></span>
+                                <span id="statusText">Inaktiv</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Activity Phases -->
+        <div class="card phase-card">
+            <div class="phase-header">
+                <span class="control-label">Aktivitetsfas</span>
+                <span class="phase-hint" id="phaseHint">Ingen fas vald</span>
+            </div>
+            <div class="phase-buttons">
+                <button class="phase-btn" data-phase="none" onclick="setPhase('none')" aria-label="Ingen fas">
+                    <span class="phase-icon">⏸️</span><span class="phase-text">Ingen</span>
+                </button>
+                <button class="phase-btn" data-phase="lecture" onclick="setPhase('lecture')" aria-label="Genomgång">
+                    <span class="phase-icon">📢</span><span class="phase-text">Genomgång</span>
+                </button>
+                <button class="phase-btn" data-phase="quiet" onclick="setPhase('quiet')" aria-label="Tyst arbete">
+                    <span class="phase-icon">✍️</span><span class="phase-text">Tyst arbete</span>
+                </button>
+                <button class="phase-btn" data-phase="discussion" onclick="setPhase('discussion')"
+                    aria-label="Diskussion">
+                    <span class="phase-icon">💬</span><span class="phase-text">Diskussion</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Graph -->
+        <div class="card graph-section">
+            <div class="graph-header">
+                <span class="graph-title">📊 Volymhistorik</span>
+                <span class="graph-time" id="graphTimeLabel">Senaste 60 sekunder</span>
+            </div>
+            <canvas id="volumeGraph"></canvas>
+        </div>
+
+        <!-- Controls -->
+        <div class="card">
+            <div class="controls-grid">
+                <div class="control-group">
+                    <span class="control-label">Tröskel (relativ dB)</span>
+                    <div class="slider-container">
+                        <input type="range" id="thresholdSlider" min="1" max="100" value="65">
+                        <span class="slider-value" id="thresholdValue">65</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <span class="control-label">Varningsljud</span>
+                    <div class="toggle-row">
+                        <span class="toggle-label-text">Spela ljud vid överskridning</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="soundToggle">
+                            <div class="toggle-track"></div>
+                            <div class="toggle-thumb"></div>
+                        </label>
+                    </div>
+                    <div class="cooldown-bar" id="cooldownBar">
+                        <div class="cooldown-fill" id="cooldownFill"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="card">
+            <div class="action-bar">
+                <button class="btn btn-primary" id="startBtn" onclick="toggleRecording()">
+                    <span id="startIcon">▶</span>
+                    <span id="startLabel">Starta mätning</span>
+                </button>
+                <button class="btn btn-calibrate" id="calibrateBtn" onclick="calibrate()" disabled>
+                    🎯 Kalibrera tyst nivå
+                </button>
+                <button class="btn btn-secondary" id="fullscreenBtn" onclick="enterFullscreen()">
+                    🖥️ Fullskärm
+                </button>
+                <button class="btn btn-secondary" id="historyBtn" onclick="showHistory()">
+                    📋 Historik
+                </button>
+                <button class="btn btn-secondary" id="resetBtn" onclick="resetStats()">
+                    ↺ Nollställ
+                </button>
+            </div>
+            <p class="calibration-msg" id="calibrationMsg"></p>
+        </div>
+
+        <footer>
+            Ljudmonitor v2.0 — Del av <a href="#">GAIA Klassrumsverktyg</a> · Data sparas bara på denna dator
+        </footer>
+    </div>
+
+    <!-- ===== FULLSCREEN VIEW ===== -->
+    <div class="fullscreen-view hidden" id="fullscreenView">
+        <div class="fs-exit" onclick="exitFullscreen()" title="Avsluta fullskärm">✕</div>
+        <div class="fs-phase-bar" id="fsPhaseBar">
+            <button class="phase-btn fs-phase-btn" data-phase="none" onclick="setPhase('none')"><span
+                    class="phase-icon">⏸️</span></button>
+            <button class="phase-btn fs-phase-btn" data-phase="lecture" onclick="setPhase('lecture')"><span
+                    class="phase-icon">📢</span></button>
+            <button class="phase-btn fs-phase-btn" data-phase="quiet" onclick="setPhase('quiet')"><span
+                    class="phase-icon">✍️</span></button>
+            <button class="phase-btn fs-phase-btn" data-phase="discussion" onclick="setPhase('discussion')"><span
+                    class="phase-icon">💬</span></button>
+        </div>
+        <div class="fs-content">
+            <div class="fs-vu-container">
+                <div class="vu-ring fs-vu-ring" id="fsVuRing"></div>
+                <div class="vu-inner">
+                    <span class="vu-value fs-vu-value" id="fsVuValue">—</span>
+                    <span class="vu-label">Relativ <span class="vu-unit">dB</span></span>
+                </div>
+            </div>
+            <div class="fs-streak" id="fsStreak">
+                <span class="fs-streak-icon">🔥</span>
+                <span class="fs-streak-time" id="fsStreakTime">0:00</span>
+                <span class="fs-streak-label">STREAK</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== SESSION REPORT OVERLAY ===== -->
+    <div class="report-overlay hidden" id="reportOverlay">
+        <div class="report-card">
+            <div class="report-header">
+                <h2>📊 Sessionsrapport</h2>
+                <button class="report-close" onclick="closeReport()">✕</button>
+            </div>
+            <div class="report-meta" id="reportMeta"></div>
+            <canvas id="reportGraph" class="report-graph"></canvas>
+            <div class="report-stats" id="reportStats"></div>
+            <div class="report-phases" id="reportPhases"></div>
+            <details class="report-reflection">
+                <summary>💭 Reflektion (valfritt)</summary>
+                <textarea id="reportReflection" placeholder="Hur upplevde du lektionen?" rows="3"></textarea>
+                <button class="btn btn-secondary" onclick="saveReflection()">Spara</button>
+            </details>
+            <div class="report-actions">
+                <button class="btn btn-primary" onclick="closeReport()">Stäng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== HISTORY OVERLAY ===== -->
+    <div class="report-overlay hidden" id="historyOverlay">
+        <div class="report-card history-card">
+            <div class="report-header">
+                <h2>📋 Sessionshistorik</h2>
+                <button class="report-close" onclick="closeHistory()">✕</button>
+            </div>
+            <div class="history-list" id="historyList"></div>
+            <div class="report-actions">
+                <button class="btn btn-primary" onclick="closeHistory()">Stäng</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
