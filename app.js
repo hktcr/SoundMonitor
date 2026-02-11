@@ -273,6 +273,7 @@ function sampleVolume() {
         checkWarningSound();
     } else {
         document.body.classList.remove('alert-active');
+        document.body.classList.remove('streak-broken');
         if (!streakActive && !graceTimeout) startStreak();
     }
 
@@ -357,9 +358,8 @@ function handleStreakBreak() {
             streakActive = false; streakBroken = true;
             streakDisplay.classList.remove('on-fire');
             document.body.classList.remove('aurora-active');
-            // Brief red pulse feedback
+            // Persistent red pulse feedback (removed in sampleVolume when level drops)
             document.body.classList.add('streak-broken');
-            setTimeout(() => document.body.classList.remove('streak-broken'), 2000);
             stopAurora();
         }
     }, GRACE_MS);
