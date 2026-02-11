@@ -239,34 +239,36 @@
                 </div>
             </div>
 
-            <!-- Main: VU + Streak + Stats -->
+            <!-- Main: Graph + Streak/Stats -->
             <div class="fs-main">
-                <div class="fs-vu-container">
-                    <div class="vu-ring fs-vu-ring" id="fsVuRing"></div>
-                    <div class="vu-inner">
-                        <span class="vu-value fs-vu-value" id="fsVuValue">—</span>
-                        <span class="vu-label">Relativ <span class="vu-unit">dB</span></span>
+                <div class="fs-graph-section">
+                    <div class="fs-current-level" id="fsCurrentLevel">
+                        <span class="fs-current-value" id="fsCurrentValue">—</span>
+                        <span class="fs-current-unit">dB</span>
                     </div>
+                    <canvas id="fsGraphCanvas" class="fs-graph-canvas"></canvas>
                 </div>
 
-                <div class="fs-streak" id="fsStreak">
-                    <img src="icons/fire.png" alt="" class="fs-streak-icon-img">
-                    <span class="fs-streak-time" id="fsStreakTime">0:00</span>
-                    <span class="fs-streak-label">STREAK</span>
-                </div>
+                <div class="fs-sidebar">
+                    <div class="fs-streak" id="fsStreak">
+                        <img src="icons/fire.png" alt="" class="fs-streak-icon-img">
+                        <span class="fs-streak-time" id="fsStreakTime">0:00</span>
+                        <span class="fs-streak-label">STREAK</span>
+                    </div>
 
-                <div class="fs-stats">
-                    <div class="fs-stat-item">
-                        <span class="fs-stat-label">SNITT</span>
-                        <span class="fs-stat-value" id="fsStatAvg">—</span>
-                    </div>
-                    <div class="fs-stat-item">
-                        <span class="fs-stat-label">TOPP</span>
-                        <span class="fs-stat-value" id="fsStatPeak">—</span>
-                    </div>
-                    <div class="fs-stat-item">
-                        <span class="fs-stat-label">ÖVER TRÖSKEL</span>
-                        <span class="fs-stat-value" id="fsStatOver">—</span>
+                    <div class="fs-stats">
+                        <div class="fs-stat-item">
+                            <span class="fs-stat-label">SNITT</span>
+                            <span class="fs-stat-value" id="fsStatAvg">—</span>
+                        </div>
+                        <div class="fs-stat-item">
+                            <span class="fs-stat-label">TOPP</span>
+                            <span class="fs-stat-value" id="fsStatPeak">—</span>
+                        </div>
+                        <div class="fs-stat-item">
+                            <span class="fs-stat-label">ÖVER TRÖSKEL</span>
+                            <span class="fs-stat-value" id="fsStatOver">—</span>
+                        </div>
                     </div>
                 </div>
             </div>

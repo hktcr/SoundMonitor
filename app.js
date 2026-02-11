@@ -265,7 +265,17 @@ function sampleVolume() {
     updateStats(level);
     updateStreakDisplay();
     updateSessionTime();
+
+    // Sync current level to fullscreen
+    if ($('fsCurrentValue')) {
+        $('fsCurrentValue').textContent = level.toFixed(0);
+        const et = getEffectiveThreshold();
+        $('fsCurrentValue').className = 'fs-current-value' +
+            (level > et ? ' highlight-red' : level > et * 0.8 ? ' highlight-orange' : ' highlight-green');
+    }
+
     drawGraph();
+    drawFullscreenGraph();
 }
 
 function getEffectiveThreshold() {
@@ -599,6 +609,116 @@ function drawGraph() {
 
     drawThresholdLine(w, h);
 }
+
+function drawFullscreenGraph() {
+    const canvas = $('fsGraphCanvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width = canvas.getBoundingClientRect().width;
+    const h = canvas.height = canvas.getBoundingClientRect().height;
+
+    ctx.clearRect(0, 0, w, h);
+
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = (i / 4) * h;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '14px Inter, sans-serif';
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i <= 4; i++) {
+        ctx.fillText(100 - i * 25, 8, (i / 4) * h + (i === 0 ? 12 : i === 4 ? -8 : 0));
+    }
+
+    if (volumeHistory.length < 2) {
+        // Draw threshold line
+        const et = getEffectiveThreshold();
+        if (et !== null) {
+            const ty = h - (et / 100) * h;
+            ctx.strokeStyle = 'rgba(239,68,68,0.8)';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([8, 8]);
+            ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(w, ty); ctx.stroke();
+            ctx.setLineDash([]);
+        }
+        return;
+    }
+
+    const dataLen = volumeHistory.length;
+    const xStep = w / (HISTORY_LENGTH - 1);
+    const startX = w - (dataLen - 1) * xStep;
+
+    // Phase background zones
+    let lastPhase = volumeHistory[0].phase, zoneStart = 0;
+    for (let i = 1; i <= dataLen; i++) {
+        const p = i < dataLen ? volumeHistory[i].phase : null;
+        if (p !== lastPhase || i === dataLen) {
+            if (lastPhase !== 'none' && PHASE_COLORS[lastPhase]) {
+                const x1 = startX + zoneStart * xStep;
+                const x2 = startX + (i - 1) * xStep + xStep;
+                const zoneW = x2 - x1;
+                ctx.fillStyle = PHASE_COLORS[lastPhase].bg;
+                ctx.fillRect(x1, 0, zoneW, h);
+                ctx.strokeStyle = PHASE_COLORS[lastPhase].line;
+                ctx.lineWidth = 2;
+                ctx.setLineDash([6, 6]);
+                ctx.beginPath(); ctx.moveTo(x1, 0); ctx.lineTo(x1, h); ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            zoneStart = i; lastPhase = p;
+        }
+    }
+
+    // Fill area
+    const gradient = ctx.createLinearGradient(0, 0, 0, h);
+    gradient.addColorStop(0, 'rgba(99,102,241,0.3)');
+    gradient.addColorStop(1, 'rgba(99,102,241,0.0)');
+    ctx.beginPath(); ctx.moveTo(startX, h);
+    for (let i = 0; i < dataLen; i++) {
+        const x = startX + i * xStep, y = h - (volumeHistory[i].level / 100) * h;
+        if (i === 0) ctx.lineTo(x, y);
+        else {
+            const px = startX + (i - 1) * xStep, py = h - (volumeHistory[i - 1].level / 100) * h;
+            const cpx = (px + x) / 2;
+            ctx.bezierCurveTo(cpx, py, cpx, y, x, y);
+        }
+    }
+    ctx.lineTo(startX + (dataLen - 1) * xStep, h); ctx.closePath();
+    ctx.fillStyle = gradient; ctx.fill();
+
+    // Line segments colored by threshold
+    const et = getEffectiveThreshold();
+    for (let i = 1; i < dataLen; i++) {
+        const x1 = startX + (i - 1) * xStep, y1 = h - (volumeHistory[i - 1].level / 100) * h;
+        const x2 = startX + i * xStep, y2 = h - (volumeHistory[i].level / 100) * h;
+        const val = volumeHistory[i].level;
+        ctx.strokeStyle = val > et ? 'rgba(239,68,68,0.95)' : val > et * 0.8 ? 'rgba(245,158,11,0.95)' : 'rgba(99,102,241,0.95)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.bezierCurveTo((x1 + x2) / 2, y1, (x1 + x2) / 2, y2, x2, y2);
+        ctx.stroke();
+    }
+
+    // Threshold line (prominent)
+    if (et !== null) {
+        const ty = h - (et / 100) * h;
+        ctx.strokeStyle = 'rgba(239,68,68,0.9)';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([10, 10]);
+        ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(w, ty); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Threshold label
+        ctx.fillStyle = 'rgba(239,68,68,0.9)';
+        ctx.font = 'bold 16px Inter, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText('Tröskel: ' + et + ' dB', w - 12, ty - 10);
+    }
+}
+
 
 function drawThresholdLine(w, h) {
     const et = getEffectiveThreshold();
