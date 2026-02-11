@@ -276,6 +276,38 @@ footer a {
     height: 14px;
 }
 
+/* Streak progress (0-10s) */
+.streak-progress-container {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    position: relative;
+    margin: 4px 0;
+}
+
+.streak-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--green), var(--orange));
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.5s ease;
+}
+
+.streak-progress-label {
+    position: absolute;
+    top: -18px;
+    right: 0;
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.streak-display:hover .streak-progress-label {
+    opacity: 1;
+}
+
 /* ---- STATS ---- */
 .stats-panel {
     display: grid;

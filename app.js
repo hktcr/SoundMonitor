@@ -9,13 +9,13 @@ let isRecording = false, animFrameId = null, updateInterval = null;
 const HISTORY_LENGTH = 120;
 const SAMPLE_INTERVAL = 500;
 let volumeHistory = [], phaseMarkers = [];
-let threshold = 65, calibrationOffset = 0;
+let threshold = 50, calibrationOffset = 0;  // Lowered from 65 to 50 dB
 let peakLevel = 0, totalSamples = 0, totalSum = 0, overThresholdCount = 0;
 
 // Streak
 let streakStart = null, streakActive = false, bestStreak = 0;
 let graceTimeout = null, streakBroken = false;
-const GRACE_MS = 2000;
+const GRACE_MS = 5000;  // Extended from 2000ms to 5000ms
 
 // Phase — thresholds are configurable defaults
 let currentPhase = 'none';
@@ -303,6 +303,20 @@ function updateStreakDisplay() {
     const timeStr = m + ':' + String(s).padStart(2, '0');
     streakTimeEl.textContent = timeStr;
     if ($('fsStreakTime')) $('fsStreakTime').textContent = timeStr;
+
+    // Update progress bar (0-10s)
+    const progressBar = $('streakProgressBar');
+    const progressLabel = $('streakProgressLabel');
+    if (progressBar) {
+        if (sec < 10) {
+            const pct = (sec / 10) * 100;
+            progressBar.style.width = pct + '%';
+            if (progressLabel) progressLabel.textContent = sec + '/10s';
+        } else {
+            progressBar.style.width = '100%';
+            if (progressLabel) progressLabel.textContent = 'Aurora aktiv!';
+        }
+    }
 
     if (sec >= 10) {
         streakDisplay.classList.add('on-fire');

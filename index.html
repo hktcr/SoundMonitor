@@ -39,6 +39,10 @@
                     <div class="streak-display" id="streakDisplay">
                         <img src="icons/fire.png" alt="" class="streak-icon-img">
                         <div class="streak-time" id="streakTime">0:00</div>
+                        <div class="streak-progress-container">
+                            <div class="streak-progress-bar" id="streakProgressBar"></div>
+                            <div class="streak-progress-label" id="streakProgressLabel">0/10s</div>
+                        </div>
                         <div class="streak-label">STREAK</div>
                         <div class="streak-best" id="streakBest"></div>
                     </div>
@@ -120,8 +124,8 @@
                 <div class="control-group">
                     <span class="control-label">Tröskel (relativ dB)</span>
                     <div class="slider-container">
-                        <input type="range" id="thresholdSlider" min="1" max="100" value="65">
-                        <span class="slider-value" id="thresholdValue">65</span>
+                        <input type="range" id="thresholdSlider" min="1" max="100" value="50">
+                        <span class="slider-value" id="thresholdValue">50</span>
                     </div>
                     <div class="threshold-hint" id="thresholdHint">Justeras automatiskt vid fasval</div>
                 </div>
