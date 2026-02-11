@@ -259,9 +259,13 @@
                     <span class="fs-current-value" id="fsCurrentValue">—</span>
                     <span class="fs-current-unit">dB</span>
                 </div>
+                <!-- Bottom: Thin graph strip -->
+                <div class="fs-graph-strip">
+                    <canvas id="fsGraphCanvas" class="fs-graph-canvas"></canvas>
+                </div>
             </div>
 
-            <!-- Sidebar: Stats + Sliders -->
+            <!-- Sidebar: Stats + Sliders (absolute within fullscreen-view) -->
             <div class="fs-sidebar">
                 <div class="fs-stats">
                     <div class="fs-stat-item">
@@ -295,34 +299,28 @@
                 </div>
             </div>
 
-            <!-- Bottom: Thin graph strip -->
-            <div class="fs-graph-strip">
-                <canvas id="fsGraphCanvas" class="fs-graph-canvas"></canvas>
-            </div>
-        </div>
-
-        <!-- Bottom: Controls (hover to show) -->
-        <div class="fs-controls">
-            <button class="btn btn-primary fs-start-btn" id="fsStartBtn" onclick="toggleRecording()">
-                <span id="fsStartLabel">Stoppa</span>
-            </button>
-            <div class="fs-phase-bar" id="fsPhaseBar">
-                <button class="phase-btn fs-phase-btn" data-phase="none" onclick="setPhase('none')"><img
-                        src="icons/pause.png" alt="" class="fs-phase-icon"></button>
-                <button class="phase-btn fs-phase-btn" data-phase="lecture" onclick="setPhase('lecture')"><img
-                        src="icons/lecture.png" alt="" class="fs-phase-icon"></button>
-                <button class="phase-btn fs-phase-btn" data-phase="quiet" onclick="setPhase('quiet')">
-                    <svg class="fs-phase-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                        <path d="m15 5 4 4" />
-                    </svg>
+            <!-- Bottom: Controls (hover to show) -->
+            <div class="fs-controls">
+                <button class="btn btn-primary fs-start-btn" id="fsStartBtn" onclick="toggleRecording()">
+                    <span id="fsStartLabel">Stoppa</span>
                 </button>
-                <button class="phase-btn fs-phase-btn" data-phase="discussion" onclick="setPhase('discussion')"><img
-                        src="icons/discussion.png" alt="" class="fs-phase-icon"></button>
+                <div class="fs-phase-bar" id="fsPhaseBar">
+                    <button class="phase-btn fs-phase-btn" data-phase="none" onclick="setPhase('none')"><img
+                            src="icons/pause.png" alt="" class="fs-phase-icon"></button>
+                    <button class="phase-btn fs-phase-btn" data-phase="lecture" onclick="setPhase('lecture')"><img
+                            src="icons/lecture.png" alt="" class="fs-phase-icon"></button>
+                    <button class="phase-btn fs-phase-btn" data-phase="quiet" onclick="setPhase('quiet')">
+                        <svg class="fs-phase-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                            <path d="m15 5 4 4" />
+                        </svg>
+                    </button>
+                    <button class="phase-btn fs-phase-btn" data-phase="discussion" onclick="setPhase('discussion')"><img
+                            src="icons/discussion.png" alt="" class="fs-phase-icon"></button>
+                </div>
             </div>
         </div>
-    </div>
     </div>
 
     <!-- ===== SESSION REPORT OVERLAY ===== -->
