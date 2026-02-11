@@ -716,6 +716,7 @@ function drawFullscreenGraph() {
         ctx.font = 'bold 16px Inter, sans-serif';
         ctx.textAlign = 'right';
         ctx.fillText('Tröskel: ' + et + ' dB', w - 12, ty - 10);
+        ctx.textAlign = 'left';  // reset
     }
 }
 
