@@ -379,11 +379,11 @@ function updateStats(level) {
         const calmPct = 1 - overPct / 100;
         if (elapsedMin >= 1) {
             const calmMin = Math.max(0, Math.round(elapsedMin * calmPct));
-            fsStudentStat.textContent = `Lugna i ${calmMin} av ${elapsedMin} min`;
+            fsStudentStat.textContent = `Bra nivå ${calmMin} av ${elapsedMin} min`;
             fsStudentStat.className = 'fs-student-stat' + (calmPct >= 0.7 ? ' stat-good' : calmPct >= 0.4 ? ' stat-ok' : ' stat-warn');
         } else {
             const calmSec = Math.max(0, Math.round(elapsedSec * calmPct));
-            fsStudentStat.textContent = `Lugna i ${calmSec} av ${elapsedSec} sek`;
+            fsStudentStat.textContent = `Bra nivå ${calmSec} av ${elapsedSec} sek`;
             fsStudentStat.className = 'fs-student-stat' + (calmPct >= 0.7 ? ' stat-good' : calmPct >= 0.4 ? ' stat-ok' : ' stat-warn');
         }
     }
