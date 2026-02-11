@@ -374,13 +374,17 @@ function updateStats(level) {
     // S4: Student-friendly stat (positive framing)
     const fsStudentStat = $('fsStudentStat');
     if (fsStudentStat && sessionStartTime) {
-        const elapsedMin = Math.floor((Date.now() - sessionStartTime) / 60000);
-        const calmMin = Math.max(0, Math.round(elapsedMin * (1 - overPct / 100)));
-        if (elapsedMin > 0) {
+        const elapsedSec = Math.floor((Date.now() - sessionStartTime) / 1000);
+        const elapsedMin = Math.floor(elapsedSec / 60);
+        const calmPct = 1 - overPct / 100;
+        if (elapsedMin >= 1) {
+            const calmMin = Math.max(0, Math.round(elapsedMin * calmPct));
             fsStudentStat.textContent = `Lugna i ${calmMin} av ${elapsedMin} min`;
-            fsStudentStat.className = 'fs-student-stat' + (calmMin >= elapsedMin * 0.7 ? ' stat-good' : calmMin >= elapsedMin * 0.4 ? ' stat-ok' : ' stat-warn');
+            fsStudentStat.className = 'fs-student-stat' + (calmPct >= 0.7 ? ' stat-good' : calmPct >= 0.4 ? ' stat-ok' : ' stat-warn');
         } else {
-            fsStudentStat.textContent = 'Mätning startar...';
+            const calmSec = Math.max(0, Math.round(elapsedSec * calmPct));
+            fsStudentStat.textContent = `Lugna i ${calmSec} av ${elapsedSec} sek`;
+            fsStudentStat.className = 'fs-student-stat' + (calmPct >= 0.7 ? ' stat-good' : calmPct >= 0.4 ? ' stat-ok' : ' stat-warn');
         }
     }
 }
