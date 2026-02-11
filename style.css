@@ -59,27 +59,14 @@ body.aurora-active .ambient-glow {
     opacity: 0;
 }
 
-/* Streak Break — red vignette pulse (loops until volume drops) */
-body.streak-broken::after {
-    content: '';
+/* Recovery gradient overlay (driven by JS dangerLevel) */
+.danger-overlay {
     position: fixed;
     inset: 0;
     z-index: 9999;
     pointer-events: none;
-    background: radial-gradient(ellipse at center, transparent 40%, rgba(220, 38, 38, 0.3) 100%);
-    animation: streak-break-pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes streak-break-pulse {
-
-    0%,
-    100% {
-        opacity: 0.3;
-    }
-
-    50% {
-        opacity: 1;
-    }
+    opacity: 0;
+    transition: opacity 0.5s ease, background 0.5s ease;
 }
 
 /* Aurora Canvas */
@@ -943,67 +930,139 @@ footer a {
     color: var(--text-muted);
 }
 
-/* Main: Graph + Streak/Stats */
-.fs-main {
-    display: flex;
-    gap: 32px;
-    align-items: stretch;
-    justify-content: center;
-    width: 100%;
-    max-width: 1400px;
+/* ---- Center Stage: Streak Ring (dominant element) ---- */
+.fs-center-stage {
     flex: 1;
-    padding: 0 40px;
-    min-height: 0;
-}
-
-/* Graph section (left, ~70%) */
-.fs-graph-section {
-    flex: 3;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
     min-height: 0;
 }
 
+.fs-streak-ring-container {
+    position: relative;
+    width: min(280px, 40vh);
+    height: min(280px, 40vh);
+}
+
+.fs-streak-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.fs-streak-ring-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.06);
+    stroke-width: 6;
+}
+
+.fs-streak-ring-progress {
+    fill: none;
+    stroke: var(--green);
+    stroke-width: 6;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.5s ease, stroke 0.5s ease;
+}
+
+.fs-streak-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.fs-streak-icon-img {
+    width: 48px;
+    height: 48px;
+    filter: brightness(1.2);
+    transition: filter 0.3s;
+}
+
+.fs-streak-time {
+    font-size: 3.5rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+
+.fs-streak-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+}
+
+/* Student-friendly stat */
+.fs-student-stat {
+    font-size: 1.4rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    transition: color 0.5s;
+}
+
+.fs-student-stat.stat-good {
+    color: var(--green);
+}
+
+.fs-student-stat.stat-ok {
+    color: var(--orange);
+}
+
+.fs-student-stat.stat-warn {
+    color: var(--red);
+}
+
+/* dB readout (smaller, subordinate) */
 .fs-current-level {
     display: flex;
     align-items: baseline;
     justify-content: center;
     gap: 8px;
+    opacity: 0.6;
 }
 
 .fs-current-value {
-    font-size: 4rem;
-    font-weight: 700;
+    font-size: 2rem;
+    font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
 
 .fs-current-unit {
-    font-size: 1.5rem;
+    font-size: 1rem;
     color: var(--text-muted);
+}
+
+/* ---- Graph Strip (thin bottom) ---- */
+.fs-graph-strip {
+    width: 100%;
+    height: 80px;
+    flex-shrink: 0;
 }
 
 .fs-graph-canvas {
     width: 100%;
-    flex: 1;
-    min-height: 150px;
+    height: 100%;
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: var(--radius);
+    border-radius: var(--radius-sm);
     background: rgba(0, 0, 0, 0.15);
 }
 
-/* Sidebar (right, ~30%) */
+/* ---- Sidebar (right, stats + sliders) ---- */
 .fs-sidebar {
-    flex: 1;
+    position: absolute;
+    right: 24px;
+    top: 100px;
+    bottom: 120px;
+    width: 240px;
     display: flex;
     flex-direction: column;
-    gap: 32px;
-    align-items: center;
+    gap: 24px;
+    align-items: stretch;
     justify-content: center;
-    min-width: 200px;
-    max-width: 320px;
-    height: 100%;
 }
 
 /* Fullscreen Adjust Panel */
@@ -1049,7 +1108,6 @@ footer a {
 
 .fs-tune-item input[type="range"] {
     appearance: none;
-    appearance: none;
     -webkit-appearance: none;
     width: 100%;
     height: 4px;
@@ -1072,31 +1130,6 @@ footer a {
 
 .fs-tune-item input[type="range"]::-webkit-slider-thumb:hover {
     transform: scale(1.2);
-}
-
-.fs-streak {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-}
-
-.fs-streak-icon-img {
-    width: 64px;
-    height: 64px;
-    filter: brightness(1.2);
-}
-
-.fs-streak-time {
-    font-size: 3rem;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-}
-
-.fs-streak-label {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    letter-spacing: 0.1em;
 }
 
 /* Stats panel */

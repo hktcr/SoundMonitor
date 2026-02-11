@@ -17,6 +17,7 @@
     <!-- Aurora background -->
     <canvas id="auroraCanvas" class="aurora-canvas"></canvas>
     <div class="ambient-glow" id="ambientGlow"></div>
+    <div class="danger-overlay" id="dangerOverlay"></div>
 
     <!-- ===== MAIN VIEW ===== -->
     <div class="container" id="mainView">
@@ -213,7 +214,7 @@
         </div>
 
         <footer>
-            Ljudmonitor v2.1 — Del av <a href="#">GAIA Klassrumsverktyg</a> · Data sparas bara på denna dator
+            Ljudmonitor v2.7 — Del av <a href="#">GAIA Klassrumsverktyg</a> · Data sparas bara på denna dator
         </footer>
     </div>
 
@@ -239,54 +240,64 @@
                 </div>
             </div>
 
-            <!-- Main: Graph + Streak/Stats -->
-            <div class="fs-main">
-                <div class="fs-graph-section">
-                    <div class="fs-current-level" id="fsCurrentLevel">
-                        <span class="fs-current-value" id="fsCurrentValue">—</span>
-                        <span class="fs-current-unit">dB</span>
-                    </div>
-                    <canvas id="fsGraphCanvas" class="fs-graph-canvas"></canvas>
-                </div>
-
-                <div class="fs-sidebar">
-                    <div class="fs-streak" id="fsStreak">
+            <!-- Center: Streak Ring (dominant element) -->
+            <div class="fs-center-stage">
+                <div class="fs-streak-ring-container">
+                    <svg class="fs-streak-svg" viewBox="0 0 200 200">
+                        <circle class="fs-streak-ring-bg" cx="100" cy="100" r="90" />
+                        <circle class="fs-streak-ring-progress" id="fsStreakRing" cx="100" cy="100" r="90"
+                            stroke-dasharray="565.5" stroke-dashoffset="565.5" />
+                    </svg>
+                    <div class="fs-streak-inner">
                         <img src="icons/fire.png" alt="" class="fs-streak-icon-img">
                         <span class="fs-streak-time" id="fsStreakTime">0:00</span>
                         <span class="fs-streak-label">STREAK</span>
                     </div>
+                </div>
+                <div class="fs-student-stat" id="fsStudentStat">Mätning startar...</div>
+                <div class="fs-current-level" id="fsCurrentLevel">
+                    <span class="fs-current-value" id="fsCurrentValue">—</span>
+                    <span class="fs-current-unit">dB</span>
+                </div>
+            </div>
 
-                    <div class="fs-stats">
-                        <div class="fs-stat-item">
-                            <span class="fs-stat-label">SNITT</span>
-                            <span class="fs-stat-value" id="fsStatAvg">—</span>
-                        </div>
-                        <div class="fs-stat-item">
-                            <span class="fs-stat-label">TOPP</span>
-                            <span class="fs-stat-value" id="fsStatPeak">—</span>
-                        </div>
-                        <div class="fs-stat-item">
-                            <span class="fs-stat-label">ÖVER TRÖSKEL</span>
-                            <span class="fs-stat-value" id="fsStatOver">—</span>
-                        </div>
+            <!-- Sidebar: Stats + Sliders -->
+            <div class="fs-sidebar">
+                <div class="fs-stats">
+                    <div class="fs-stat-item">
+                        <span class="fs-stat-label">SNITT</span>
+                        <span class="fs-stat-value" id="fsStatAvg">—</span>
                     </div>
-
-                    <div class="fs-adjust-panel" id="fsAdjustPanel">
-                        <div class="fs-adjust-header">FINJUSTERA</div>
-                        <div class="fs-tune-item">
-                            <label>Tyst arbete <span id="fsVal-quiet">0</span></label>
-                            <input type="range" id="fsTune-quiet" min="-10" max="10" value="0">
-                        </div>
-                        <div class="fs-tune-item">
-                            <label>Genomgång <span id="fsVal-lecture">0</span></label>
-                            <input type="range" id="fsTune-lecture" min="-10" max="10" value="0">
-                        </div>
-                        <div class="fs-tune-item">
-                            <label>Diskussion <span id="fsVal-discussion">0</span></label>
-                            <input type="range" id="fsTune-discussion" min="-10" max="10" value="0">
-                        </div>
+                    <div class="fs-stat-item">
+                        <span class="fs-stat-label">TOPP</span>
+                        <span class="fs-stat-value" id="fsStatPeak">—</span>
+                    </div>
+                    <div class="fs-stat-item">
+                        <span class="fs-stat-label">ÖVER TRÖSKEL</span>
+                        <span class="fs-stat-value" id="fsStatOver">—</span>
                     </div>
                 </div>
+
+                <div class="fs-adjust-panel" id="fsAdjustPanel">
+                    <div class="fs-adjust-header">FINJUSTERA</div>
+                    <div class="fs-tune-item">
+                        <label>Tyst arbete <span id="fsVal-quiet">0</span></label>
+                        <input type="range" id="fsTune-quiet" min="-10" max="10" value="0">
+                    </div>
+                    <div class="fs-tune-item">
+                        <label>Genomgång <span id="fsVal-lecture">0</span></label>
+                        <input type="range" id="fsTune-lecture" min="-10" max="10" value="0">
+                    </div>
+                    <div class="fs-tune-item">
+                        <label>Diskussion <span id="fsVal-discussion">0</span></label>
+                        <input type="range" id="fsTune-discussion" min="-10" max="10" value="0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom: Thin graph strip -->
+            <div class="fs-graph-strip">
+                <canvas id="fsGraphCanvas" class="fs-graph-canvas"></canvas>
             </div>
         </div>
 

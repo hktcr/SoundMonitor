@@ -1,5 +1,5 @@
 // ============================================================
-// LJUDMONITOR v2.6 — App Logic
+// LJUDMONITOR v2.7 — App Logic
 // ============================================================
 
 // ---- STATE ----
@@ -19,6 +19,15 @@ const PHASE_TO_ID = { none: 0, lecture: 1, quiet: 2, discussion: 3 };
 const ID_TO_PHASE = ['none', 'lecture', 'quiet', 'discussion'];
 let threshold = 50, calibrationOffset = 0;  // Lowered from 65 to 50 dB
 let peakLevel = 0, totalSamples = 0, totalSum = 0, overThresholdCount = 0;
+
+// EMA filter for smooth display
+const EMA_ALPHA = 0.3;
+let smoothedLevel = 0;
+
+// Recovery gradient (0 = safe, 1 = danger)
+let dangerLevel = 0;
+const DANGER_RISE = 0.4;   // How fast danger rises
+const DANGER_FALL = 0.15;  // How fast danger falls (slower = more forgiving)
 
 // Streak
 let streakStart = null, streakActive = false, bestStreak = 0;
@@ -254,8 +263,11 @@ function sampleVolume() {
     const level = rmsToDb(getRMS());
     const effectiveThreshold = getEffectiveThreshold();
 
-    // Circular Buffer update
-    historyLevels[historyIndex] = level;
+    // EMA smoothing for display (raw level kept for threshold)
+    smoothedLevel = EMA_ALPHA * level + (1 - EMA_ALPHA) * smoothedLevel;
+
+    // Circular Buffer update — store SMOOTHED for graph display
+    historyLevels[historyIndex] = smoothedLevel;
     historyPhases[historyIndex] = PHASE_TO_ID[currentPhase] || 0;
     historyTimes[historyIndex] = Date.now();
 
@@ -266,19 +278,24 @@ function sampleVolume() {
     if (level > peakLevel) peakLevel = level;
     if (level > effectiveThreshold) overThresholdCount++;
 
-    // Threshold check
+    // Recovery gradient — smooth danger level
     if (level > effectiveThreshold) {
+        dangerLevel = Math.min(1, dangerLevel + DANGER_RISE);
         document.body.classList.add('alert-active');
         handleStreakBreak();
         checkWarningSound();
     } else {
-        document.body.classList.remove('alert-active');
-        document.body.classList.remove('streak-broken');
+        dangerLevel = Math.max(0, dangerLevel - DANGER_FALL);
+        if (dangerLevel < 0.05) {
+            document.body.classList.remove('alert-active');
+            dangerLevel = 0;
+        }
         if (!streakActive && !graceTimeout) startStreak();
     }
+    updateDangerOverlay();
 
     // Update VU meter (at 500ms interval — smooth transitions)
-    vuValue.textContent = level.toFixed(0);
+    vuValue.textContent = smoothedLevel.toFixed(0);
     let cls = 'level-green', col = 'var(--green)';
     if (level > effectiveThreshold) { cls = 'level-red'; col = 'var(--red)'; }
     else if (level > effectiveThreshold * 0.8) { cls = 'level-orange'; col = 'var(--orange)'; }
@@ -287,7 +304,7 @@ function sampleVolume() {
 
     // Fullscreen VU mirror
     const fsVu = $('fsVuValue'), fsRing = $('fsVuRing');
-    if (fsVu) { fsVu.textContent = level.toFixed(0); fsVu.style.color = col; }
+    if (fsVu) { fsVu.textContent = smoothedLevel.toFixed(0); fsVu.style.color = col; }
     if (fsRing) fsRing.className = 'vu-ring fs-vu-ring ' + cls;
 
     updateStats(level);
@@ -296,7 +313,7 @@ function sampleVolume() {
 
     // Sync current level to fullscreen
     if ($('fsCurrentValue')) {
-        $('fsCurrentValue').textContent = level.toFixed(0);
+        $('fsCurrentValue').textContent = smoothedLevel.toFixed(0);
         const et = getEffectiveThreshold();
         $('fsCurrentValue').className = 'fs-current-value' +
             (level > et ? ' highlight-red' : level > et * 0.8 ? ' highlight-orange' : ' highlight-green');
@@ -304,6 +321,20 @@ function sampleVolume() {
 
     drawGraph();
     drawFullscreenGraph();
+}
+
+// Recovery gradient overlay
+function updateDangerOverlay() {
+    const overlay = $('dangerOverlay');
+    if (!overlay) return;
+    if (dangerLevel <= 0) {
+        overlay.style.opacity = '0';
+        return;
+    }
+    // Color: red at danger=1, orange at 0.5, transparent at 0
+    const r = 220, g = Math.round(38 + (1 - dangerLevel) * 120), b = 38;
+    overlay.style.background = `radial-gradient(ellipse at center, transparent 40%, rgba(${r},${g},${b},${dangerLevel * 0.3}) 100%)`;
+    overlay.style.opacity = '1';
 }
 
 function getEffectiveThreshold() {
@@ -339,6 +370,19 @@ function updateStats(level) {
         $('fsStatOver').textContent = overPct.toFixed(0) + '%';
         $('fsStatOver').className = 'fs-stat-value' + (overPct > 30 ? ' highlight-red' : overPct > 10 ? ' highlight-orange' : ' highlight-green');
     }
+
+    // S4: Student-friendly stat (positive framing)
+    const fsStudentStat = $('fsStudentStat');
+    if (fsStudentStat && sessionStartTime) {
+        const elapsedMin = Math.floor((Date.now() - sessionStartTime) / 60000);
+        const calmMin = Math.max(0, Math.round(elapsedMin * (1 - overPct / 100)));
+        if (elapsedMin > 0) {
+            fsStudentStat.textContent = `Lugna i ${calmMin} av ${elapsedMin} min`;
+            fsStudentStat.className = 'fs-student-stat' + (calmMin >= elapsedMin * 0.7 ? ' stat-good' : calmMin >= elapsedMin * 0.4 ? ' stat-ok' : ' stat-warn');
+        } else {
+            fsStudentStat.textContent = 'Mätning startar...';
+        }
+    }
 }
 
 // ---- STREAK ----
@@ -358,8 +402,6 @@ function handleStreakBreak() {
             streakActive = false; streakBroken = true;
             streakDisplay.classList.remove('on-fire');
             document.body.classList.remove('aurora-active');
-            // Persistent red pulse feedback (removed in sampleVolume when level drops)
-            document.body.classList.add('streak-broken');
             stopAurora();
         }
     }, GRACE_MS);
@@ -390,6 +432,20 @@ function updateStreakDisplay() {
         } else {
             progressBar.style.width = '100%';
             if (progressLabel) progressLabel.textContent = 'Aurora aktiv!';
+        }
+    }
+
+    // Fullscreen: SVG streak ring progress
+    const ring = $('fsStreakRing');
+    if (ring) {
+        const circumference = 565.5; // 2π × 90
+        if (sec < 10) {
+            const progress = sec / 10;
+            ring.style.strokeDashoffset = circumference * (1 - progress);
+            ring.style.stroke = 'var(--green)';
+        } else {
+            ring.style.strokeDashoffset = '0';
+            ring.style.stroke = 'var(--aurora, #22c55e)';
         }
     }
 
