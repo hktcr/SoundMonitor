@@ -25,6 +25,7 @@ const PHASE_THRESHOLDS = {
     quiet: 35,       // Low ceiling: individual focus work
     discussion: 65   // Higher ceiling: active group conversation
 };
+let phaseAdjustments = { quiet: 0, lecture: 0, discussion: 0 };  // Fine-tuning offsets
 const PHASE_LABELS = { none: 'Ingen', lecture: 'Genomgång', quiet: 'Tyst arbete', discussion: 'Diskussion' };
 const PHASE_COLORS = {
     none: { bg: 'rgba(99,102,241,0.15)', line: 'rgba(99,102,241,0.5)' },
@@ -75,9 +76,20 @@ function init() {
     if (saved) {
         const data = JSON.parse(saved);
         calibrationOffset = data.offset;
+        if (data.thresholds) {
+            PHASE_THRESHOLDS.quiet = data.thresholds.quiet;
+            PHASE_THRESHOLDS.lecture = data.thresholds.lecture;
+            PHASE_THRESHOLDS.discussion = data.thresholds.discussion;
+        }
         calibrationMsg.textContent = 'Kalibrering laddad (' + data.date + ')';
         calibrationMsg.className = 'calibration-msg success';
         setTimeout(() => { calibrationMsg.textContent = ''; }, 3000);
+    }
+
+    // Load phase adjustments
+    const savedAdj = localStorage.getItem('phaseAdjustments');
+    if (savedAdj) {
+        phaseAdjustments = JSON.parse(savedAdj);
     }
 
     // Load best streak
@@ -99,6 +111,9 @@ function init() {
 
     // Build graph legend
     buildGraphLegend();
+
+    // Setup fine-tuning sliders
+    setupTuneSliders();
 
     setPhase('none');
     drawGraph();
@@ -248,12 +263,18 @@ function sampleVolume() {
     }
 
     updateStats(level);
+    updateStreakDisplay();
+    updateSessionTime();
     drawGraph();
 }
 
 function getEffectiveThreshold() {
     const pt = PHASE_THRESHOLDS[currentPhase];
-    return pt !== null ? pt : threshold;
+    if (pt !== null) {
+        const adjustment = phaseAdjustments[currentPhase] || 0;
+        return pt + adjustment;
+    }
+    return threshold;
 }
 
 function updateStats(level) {
@@ -266,6 +287,20 @@ function updateStats(level) {
     statPeak.className = 'stat-value' + (peakLevel > et ? ' highlight-red' : ' highlight-orange');
     statOver.textContent = overPct.toFixed(0) + '%';
     statOver.className = 'stat-value' + (overPct > 30 ? ' highlight-red' : overPct > 10 ? ' highlight-orange' : ' highlight-green');
+
+    // Sync to fullscreen
+    if ($('fsStatAvg')) {
+        $('fsStatAvg').textContent = avg.toFixed(0);
+        $('fsStatAvg').className = 'fs-stat-value' + (avg > et ? ' highlight-red' : avg > et * 0.8 ? ' highlight-orange' : ' highlight-green');
+    }
+    if ($('fsStatPeak')) {
+        $('fsStatPeak').textContent = peakLevel.toFixed(0);
+        $('fsStatPeak').className = 'fs-stat-value' + (peakLevel > et ? ' highlight-red' : ' highlight-orange');
+    }
+    if ($('fsStatOver')) {
+        $('fsStatOver').textContent = overPct.toFixed(0) + '%';
+        $('fsStatOver').className = 'fs-stat-value' + (overPct > 30 ? ' highlight-red' : overPct > 10 ? ' highlight-orange' : ' highlight-green');
+    }
 }
 
 // ---- STREAK ----
@@ -335,6 +370,17 @@ function updateStreakDisplay() {
     if (bestSec > 0) {
         const bm = Math.floor(bestSec / 60), bs = bestSec % 60;
         streakBestEl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5C7 4 7 7 7 7"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5C17 4 17 7 17 7"/><path d="M4 22h16"/><path d="M10 22V8a4 4 0 0 0-4-4v0"/><path d="M14 22V8a4 4 0 0 1 4-4v0"/><path d="M10 8h4"/></svg> ' + bm + ':' + String(bs).padStart(2, '0');
+    }
+}
+
+function updateSessionTime() {
+    if (!isRecording || !sessionStartTime) return;
+    const elapsed = Date.now() - sessionStartTime;
+    const mins = Math.floor(elapsed / 60000);
+    const secs = Math.floor((elapsed % 60000) / 1000);
+    const timeStr = mins + ':' + String(secs).padStart(2, '0');
+    if ($('fsSessionTime')) {
+        $('fsSessionTime').textContent = 'Sessionstid: ' + timeStr;
     }
 }
 
@@ -427,6 +473,24 @@ function setPhase(phase) {
             setTimeout(() => thresholdHint.classList.remove('visible'), 2000);
         }
     }
+
+    // Update fullscreen phase indicator
+    const fsIndicator = $('fsPhaseIndicator');
+    if (fsIndicator) {
+        const label = PHASE_LABELS[phase] || 'Ingen fas';
+        const et = getEffectiveThreshold();
+        const thresholdText = et ? `Mål: under ${et} dB` : 'Ingen tröskel';
+
+        fsIndicator.querySelector('.fs-phase-label').textContent = label.toUpperCase();
+        fsIndicator.querySelector('.fs-threshold-hint').textContent = thresholdText;
+
+        // Update color class
+        fsIndicator.className = 'fs-phase-indicator';
+        if (phase === 'quiet') fsIndicator.classList.add('phase-quiet');
+        if (phase === 'lecture') fsIndicator.classList.add('phase-lecture');
+        if (phase === 'discussion') fsIndicator.classList.add('phase-discussion');
+    }
+
     drawGraph();
 }
 
@@ -579,6 +643,14 @@ function playChime() {
 }
 
 // ---- CALIBRATION ----
+function calculatePhaseThresholds(baseLevel) {
+    return {
+        quiet: Math.round(baseLevel + 10),
+        lecture: Math.round(baseLevel + 25),
+        discussion: Math.round(baseLevel + 35)
+    };
+}
+
 async function calibrate() {
     if (!isRecording) return;
     calibrateBtn.classList.add('calibrating'); calibrateBtn.disabled = true;
@@ -592,14 +664,41 @@ async function calibrate() {
     }
     if (samples.length > 0) {
         calibrationOffset = (samples.reduce((a, b) => a + b, 0) / samples.length) * 0.9;
+
+        // Calculate intelligent phase thresholds based on ambient level
+        const avgRMS = samples.reduce((a, b) => a + b, 0) / samples.length;
+        const baseLevel = rmsToDb(avgRMS);
+        const suggested = calculatePhaseThresholds(baseLevel);
+
+        // Update phase thresholds
+        PHASE_THRESHOLDS.quiet = suggested.quiet;
+        PHASE_THRESHOLDS.lecture = suggested.lecture;
+        PHASE_THRESHOLDS.discussion = suggested.discussion;
+
+        // Save calibration and thresholds
         const dateStr = new Date().toLocaleDateString('sv-SE');
-        localStorage.setItem('soundmonitor_calibration', JSON.stringify({ offset: calibrationOffset, date: dateStr }));
-        calibrationMsg.textContent = 'Kalibrering sparad!';
+        localStorage.setItem('soundmonitor_calibration', JSON.stringify({
+            offset: calibrationOffset,
+            date: dateStr,
+            thresholds: PHASE_THRESHOLDS
+        }));
+
+        // Update fine-tune value displays
+        updateTuneDisplays();
+
+        // Show fine-tune panel
+        const tunePanel = $('phaseTune');
+        if (tunePanel) tunePanel.classList.add('visible');
+
+        calibrationMsg.innerHTML = `✓ Kalibrerad! Föreslagna trösklar:<br>
+            Tyst arbete: ${suggested.quiet} dB | 
+            Genomgång: ${suggested.lecture} dB | 
+            Diskussion: ${suggested.discussion} dB`;
         calibrationMsg.className = 'calibration-msg success';
         resetStats();
     }
     calibrateBtn.classList.remove('calibrating'); calibrateBtn.disabled = false;
-    setTimeout(() => { calibrationMsg.textContent = ''; }, 4000);
+    setTimeout(() => { calibrationMsg.className = 'calibration-msg'; }, 6000);
 }
 
 // ---- RESET ----
@@ -774,6 +873,47 @@ function showHistory() {
     }).join('');
 }
 function closeHistory() { $('historyOverlay').classList.add('hidden'); }
+
+// ---- FINE-TUNING ----
+function updateTuneDisplays() {
+    const tuneQuietValue = $('tuneQuietValue');
+    const tuneLectureValue = $('tuneLectureValue');
+    const tuneDiscussionValue = $('tuneDiscussionValue');
+
+    if (tuneQuietValue) tuneQuietValue.textContent = (PHASE_THRESHOLDS.quiet + phaseAdjustments.quiet) + ' dB';
+    if (tuneLectureValue) tuneLectureValue.textContent = (PHASE_THRESHOLDS.lecture + phaseAdjustments.lecture) + ' dB';
+    if (tuneDiscussionValue) tuneDiscussionValue.textContent = (PHASE_THRESHOLDS.discussion + phaseAdjustments.discussion) + ' dB';
+}
+
+function setupTuneSliders() {
+    const tuneQuiet = $('tuneQuiet');
+    const tuneLecture = $('tuneLecture');
+    const tuneDiscussion = $('tuneDiscussion');
+
+    if (tuneQuiet) {
+        tuneQuiet.addEventListener('input', (e) => {
+            phaseAdjustments.quiet = parseInt(e.target.value);
+            updateTuneDisplays();
+            localStorage.setItem('phaseAdjustments', JSON.stringify(phaseAdjustments));
+        });
+    }
+
+    if (tuneLecture) {
+        tuneLecture.addEventListener('input', (e) => {
+            phaseAdjustments.lecture = parseInt(e.target.value);
+            updateTuneDisplays();
+            localStorage.setItem('phaseAdjustments', JSON.stringify(phaseAdjustments));
+        });
+    }
+
+    if (tuneDiscussion) {
+        tuneDiscussion.addEventListener('input', (e) => {
+            phaseAdjustments.discussion = parseInt(e.target.value);
+            updateTuneDisplays();
+            localStorage.setItem('phaseAdjustments', JSON.stringify(phaseAdjustments));
+        });
+    }
+}
 
 // ---- BOOT ----
 init();

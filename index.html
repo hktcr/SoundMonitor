@@ -99,6 +99,25 @@
                         class="phase-text">Diskussion</span>
                 </button>
             </div>
+
+            <!-- Fine-tuning panel (shown after calibration) -->
+            <div class="phase-fine-tune" id="phaseTune">
+                <div class="tune-item">
+                    <span class="tune-label">Tyst arbete</span>
+                    <input type="range" id="tuneQuiet" min="-10" max="10" value="0" step="1">
+                    <span class="tune-value" id="tuneQuietValue">35 dB</span>
+                </div>
+                <div class="tune-item">
+                    <span class="tune-label">Genomgång</span>
+                    <input type="range" id="tuneLecture" min="-10" max="10" value="0" step="1">
+                    <span class="tune-value" id="tuneLectureValue">50 dB</span>
+                </div>
+                <div class="tune-item">
+                    <span class="tune-label">Diskussion</span>
+                    <input type="range" id="tuneDiscussion" min="-10" max="10" value="0" step="1">
+                    <span class="tune-value" id="tuneDiscussionValue">60 dB</span>
+                </div>
+            </div>
         </div>
 
         <!-- Graph -->
@@ -207,38 +226,71 @@
                 <path d="m6 6 12 12" />
             </svg>
         </div>
-        <div class="fs-top-bar">
-            <div class="fs-phase-bar" id="fsPhaseBar">
-                <button class="phase-btn fs-phase-btn" data-phase="none" onclick="setPhase('none')"><img
-                        src="icons/pause.png" alt="" class="fs-phase-icon"></button>
-                <button class="phase-btn fs-phase-btn" data-phase="lecture" onclick="setPhase('lecture')"><img
-                        src="icons/lecture.png" alt="" class="fs-phase-icon"></button>
-                <button class="phase-btn fs-phase-btn" data-phase="quiet" onclick="setPhase('quiet')">
-                    <svg class="fs-phase-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                        <path d="m15 5 4 4" />
-                    </svg>
-                </button>
-                <button class="phase-btn fs-phase-btn" data-phase="discussion" onclick="setPhase('discussion')"><img
-                        src="icons/discussion.png" alt="" class="fs-phase-icon"></button>
-            </div>
-            <button class="btn btn-primary fs-start-btn" id="fsStartBtn" onclick="toggleRecording()">
-                <span id="fsStartLabel">Stoppa</span>
-            </button>
-        </div>
+
         <div class="fs-content">
-            <div class="fs-vu-container">
-                <div class="vu-ring fs-vu-ring" id="fsVuRing"></div>
-                <div class="vu-inner">
-                    <span class="vu-value fs-vu-value" id="fsVuValue">—</span>
-                    <span class="vu-label">Relativ <span class="vu-unit">dB</span></span>
+            <!-- Header: Phase indicator + Session time -->
+            <div class="fs-header">
+                <div class="fs-phase-indicator" id="fsPhaseIndicator">
+                    <span class="fs-phase-label">INGEN FAS</span>
+                    <span class="fs-threshold-hint">Ingen tröskel</span>
+                </div>
+                <div class="fs-session-time" id="fsSessionTime">
+                    Sessionstid: 0:00
                 </div>
             </div>
-            <div class="fs-streak" id="fsStreak">
-                <img src="icons/fire.png" alt="" class="fs-streak-icon-img">
-                <span class="fs-streak-time" id="fsStreakTime">0:00</span>
-                <span class="fs-streak-label">STREAK</span>
+
+            <!-- Main: VU + Streak + Stats -->
+            <div class="fs-main">
+                <div class="fs-vu-container">
+                    <div class="vu-ring fs-vu-ring" id="fsVuRing"></div>
+                    <div class="vu-inner">
+                        <span class="vu-value fs-vu-value" id="fsVuValue">—</span>
+                        <span class="vu-label">Relativ <span class="vu-unit">dB</span></span>
+                    </div>
+                </div>
+
+                <div class="fs-streak" id="fsStreak">
+                    <img src="icons/fire.png" alt="" class="fs-streak-icon-img">
+                    <span class="fs-streak-time" id="fsStreakTime">0:00</span>
+                    <span class="fs-streak-label">STREAK</span>
+                </div>
+
+                <div class="fs-stats">
+                    <div class="fs-stat-item">
+                        <span class="fs-stat-label">SNITT</span>
+                        <span class="fs-stat-value" id="fsStatAvg">—</span>
+                    </div>
+                    <div class="fs-stat-item">
+                        <span class="fs-stat-label">TOPP</span>
+                        <span class="fs-stat-value" id="fsStatPeak">—</span>
+                    </div>
+                    <div class="fs-stat-item">
+                        <span class="fs-stat-label">ÖVER TRÖSKEL</span>
+                        <span class="fs-stat-value" id="fsStatOver">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom: Controls (hover to show) -->
+            <div class="fs-controls">
+                <button class="btn btn-primary fs-start-btn" id="fsStartBtn" onclick="toggleRecording()">
+                    <span id="fsStartLabel">Stoppa</span>
+                </button>
+                <div class="fs-phase-bar" id="fsPhaseBar">
+                    <button class="phase-btn fs-phase-btn" data-phase="none" onclick="setPhase('none')"><img
+                            src="icons/pause.png" alt="" class="fs-phase-icon"></button>
+                    <button class="phase-btn fs-phase-btn" data-phase="lecture" onclick="setPhase('lecture')"><img
+                            src="icons/lecture.png" alt="" class="fs-phase-icon"></button>
+                    <button class="phase-btn fs-phase-btn" data-phase="quiet" onclick="setPhase('quiet')">
+                        <svg class="fs-phase-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                            <path d="m15 5 4 4" />
+                        </svg>
+                    </button>
+                    <button class="phase-btn fs-phase-btn" data-phase="discussion" onclick="setPhase('discussion')"><img
+                            src="icons/discussion.png" alt="" class="fs-phase-icon"></button>
+                </div>
             </div>
         </div>
     </div>
