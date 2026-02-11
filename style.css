@@ -1,5 +1,5 @@
 /* ============================================================
-   LJUDMONITOR v2.1 — Stylesheet
+   LJUDMONITOR v2.8 — Stylesheet
    ============================================================ */
 
 /* ---- TOKENS ---- */
@@ -15,6 +15,7 @@
     --green: #22c55e;
     --orange: #f59e0b;
     --red: #ef4444;
+    --discussion-blue: #38bdf8;
     --radius: 16px;
     --radius-sm: 10px;
     /* Phase colors */
@@ -1016,13 +1017,9 @@ footer a {
     color: var(--red);
 }
 
-/* dB readout (smaller, subordinate) */
+/* dB readout — hidden in fullscreen (VEP: redundant with graph) */
 .fs-current-level {
-    display: flex;
-    align-items: baseline;
-    justify-content: center;
-    gap: 8px;
-    opacity: 0.6;
+    display: none;
 }
 
 .fs-current-value {
@@ -1051,7 +1048,7 @@ footer a {
     background: rgba(0, 0, 0, 0.15);
 }
 
-/* ---- Sidebar (right, stats + sliders) ---- */
+/* ---- Sidebar (right, collapsible — VEP: reduce channels) ---- */
 .fs-sidebar {
     position: absolute;
     right: 24px;
@@ -1063,6 +1060,13 @@ footer a {
     gap: 24px;
     align-items: stretch;
     justify-content: center;
+    opacity: 0.08;
+    transition: opacity 0.4s ease;
+}
+
+.fs-sidebar:hover,
+.fs-sidebar.expanded {
+    opacity: 1;
 }
 
 /* Fullscreen Adjust Panel */
@@ -1459,4 +1463,119 @@ body.aurora-active .fs-streak-icon-img {
     .fs-vu-value {
         font-size: 3.5rem;
     }
+}
+
+/* ---- DISCUSSION PHASE IDENTITY (VEP: blue = conversation ok) ---- */
+.fullscreen-view.phase-discussion .fs-streak-ring-progress {
+    stroke: var(--discussion-blue) !important;
+}
+
+.fullscreen-view.phase-discussion .fs-phase-indicator {
+    border-color: var(--discussion-blue);
+}
+
+.fullscreen-view.phase-discussion .fs-student-stat.stat-good {
+    color: var(--discussion-blue);
+}
+
+/* ---- AUTO-FADE HEADER (VEP: reduce channels) ---- */
+.fs-header {
+    transition: opacity 0.8s ease;
+}
+
+.fs-header.faded {
+    opacity: 0.15;
+}
+
+.fs-header.faded:hover {
+    opacity: 1;
+}
+
+/* ---- PROJECTOR MODE (VEP: NPF + bad projectors) ---- */
+.fullscreen-view.projector-mode {
+    background: #000;
+}
+
+.fullscreen-view.projector-mode .fs-streak-ring-bg {
+    stroke: rgba(255, 255, 255, 0.35);
+    stroke-width: 12;
+}
+
+.fullscreen-view.projector-mode .fs-streak-ring-progress {
+    stroke-width: 12;
+}
+
+.fullscreen-view.projector-mode .fs-streak-time {
+    font-size: 5rem;
+    color: #fff;
+}
+
+.fullscreen-view.projector-mode .fs-streak-label {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1rem;
+}
+
+.fullscreen-view.projector-mode .fs-student-stat {
+    display: none;
+}
+
+.fullscreen-view.projector-mode .fs-sidebar {
+    display: none;
+}
+
+.fullscreen-view.projector-mode .fs-graph-strip {
+    display: none;
+}
+
+.fullscreen-view.projector-mode #auroraCanvas {
+    display: none;
+}
+
+.fullscreen-view.projector-mode .danger-overlay {
+    display: none !important;
+}
+
+.fullscreen-view.projector-mode .fs-header {
+    opacity: 0.3;
+}
+
+.fullscreen-view.projector-mode .fs-phase-indicator {
+    font-size: 1.4rem;
+    padding: 12px 24px;
+}
+
+/* Projector mode toggle button */
+.fs-projector-toggle {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 101;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.fullscreen-view:hover .fs-projector-toggle {
+    opacity: 1;
+}
+
+.fs-projector-toggle:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text);
+}
+
+.fs-projector-toggle.active {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: var(--discussion-blue);
+    color: var(--discussion-blue);
 }

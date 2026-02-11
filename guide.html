@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="sv">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lärarguide — Ljudmonitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0e1a;
+            color: #e2e8f0;
+            line-height: 1.7;
+            padding: 40px 20px;
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        a {
+            color: #818cf8;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #6366f1, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: rgba(226, 232, 240, 0.5);
+            font-size: 0.9rem;
+            margin-bottom: 40px;
+        }
+
+        h2 {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-top: 40px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+        }
+
+        h2 .emoji {
+            margin-right: 8px;
+        }
+
+        p {
+            margin-bottom: 16px;
+        }
+
+        ul {
+            padding-left: 24px;
+            margin-bottom: 16px;
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        .card {
+            background: rgba(15, 20, 35, 0.85);
+            border: 1px solid rgba(99, 102, 241, 0.12);
+            border-radius: 16px;
+            padding: 24px;
+            margin: 20px 0;
+        }
+
+        .card h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #818cf8;
+        }
+
+        .highlight {
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 3px solid #6366f1;
+            padding: 16px 20px;
+            border-radius: 0 10px 10px 0;
+            margin: 16px 0;
+        }
+
+        .warning {
+            background: rgba(239, 68, 68, 0.08);
+            border-left: 3px solid #ef4444;
+            padding: 16px 20px;
+            border-radius: 0 10px 10px 0;
+            margin: 16px 0;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 40px;
+            padding: 10px 18px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        .back-link:hover {
+            background: rgba(99, 102, 241, 0.1);
+            text-decoration: none;
+        }
+
+        .checklist {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .checklist li::before {
+            content: "☐ ";
+            color: rgba(226, 232, 240, 0.4);
+        }
+
+        footer {
+            text-align: center;
+            color: rgba(226, 232, 240, 0.3);
+            font-size: 0.7rem;
+            padding: 40px 0 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Lärarguide</h1>
+    <p class="subtitle">Så använder du Ljudmonitor i klassrummet — etiskt, effektivt och med eleverna.</p>
+
+    <h2><span class="emoji">🎯</span>Vad verktyget mäter</h2>
+    <p>Ljudmonitor mäter <strong>klassrummets totala ljudnivå</strong> i realtid. Den mäter inte enskilda elever, spelar
+        inte in ljud och sparar ingen data mellan sessioner.</p>
+    <p>Tänk på det som en termometer för klassrummet — den visar var ni är just nu, utan att peka på någon.</p>
+
+    <div class="card">
+        <h3>Teknisk fakta</h3>
+        <ul>
+            <li>Ingen röst spelas in — bara volymnivå (dB) beräknas</li>
+            <li>All data finns bara i webbläsarens minne och försvinner vid stängning</li>
+            <li>Inget konto, ingen inloggning, inga externa anslutningar</li>
+            <li>Ingen individidentifiering är möjlig</li>
+        </ul>
+    </div>
+
+    <h2><span class="emoji">🗣️</span>Så presenterar du det för klassen</h2>
+    <p>Hur du introducerar verktyget avgör hur eleverna uppfattar det. Undvik att presentera det som övervakning eller
+        bestraffning.</p>
+
+    <div class="highlight">
+        <strong>Bra introduktion:</strong><br>
+        "Vi ska testa ett verktyg som visar hur vår ljudnivå ser ut. Det mäter hela rummet — inte någon enskild person.
+        Om vi håller en bra nivå tänds ett ljusfenomen. Vi testar i två veckor, sen bestämmer vi tillsammans om vi vill
+        ha kvar det."
+    </div>
+
+    <div class="warning">
+        <strong>Undvik:</strong><br>
+        "Om ni inte kan vara tysta sätter jag på monitorn." — Det gör verktyget till ett straff istället för ett stöd.
+    </div>
+
+    <h2><span class="emoji">🗳️</span>Testperiod och klassröstning</h2>
+    <p>Vi rekommenderar att:</p>
+    <ol>
+        <li>Testa verktyget i <strong>2 veckor</strong> innan ni bestämmer er</li>
+        <li>Låt klassen <strong>rösta</strong> om de vill ha kvar det</li>
+        <li>Om majoriteten säger nej — respektera det</li>
+    </ol>
+    <p>Delaktighet bygger tillit. En klass som själv valt verktyget använder det bättre.</p>
+
+    <h2><span class="emoji">⚙️</span>Faslägen</h2>
+    <p>Verktyget har fyra faslägen med olika trösklar:</p>
+    <div class="card">
+        <ul>
+            <li><strong>Genomgång</strong> — Lägsta tröskel. Signalerar att läraren talar.</li>
+            <li><strong>Tyst arbete</strong> — Låg tröskel. Enskilt arbete, minimal samtalsnivå.</li>
+            <li><strong>Diskussion</strong> — Hög tröskel. Samtal förväntas och uppmuntras — verktyget varnar bara vid
+                <em>mycket</em> höga nivåer.</li>
+            <li><strong>Ingen fas</strong> — Manuell tröskel via slidern.</li>
+        </ul>
+    </div>
+    <p>Vid diskussionsfasen byter gränssnittet till <strong>blå ton</strong> som bekräftar att samtal pågår som
+        förväntat.</p>
+
+    <h2><span class="emoji">📺</span>Projektorläge</h2>
+    <p>I fullskärmsläget finns en "Projektorläge"-knapp (syns vid hover, nere till höger). Det ger:</p>
+    <ul>
+        <li>Tjockare ring med högre kontrast — fungerar på dåliga projektorer</li>
+        <li>Inga animationer (aurora, gradient) — bra för elever med sensorisk känslighet</li>
+        <li>Bara ringen och fasindikatorn — renare, lugnare vy</li>
+    </ul>
+
+    <h2><span class="emoji">⚠️</span>När du bör stänga av</h2>
+    <ul>
+        <li>Om en elev uttrycker obehag — ta det på allvar, stäng av</li>
+        <li>Om klassen aldrig når grönt — justera tröskeln eller byt fas innan det cementerar en negativ självbild</li>
+        <li>Om elever börjar "shisha" varandra eller social kontroll uppstår</li>
+        <li>Om verktyget används som hot, inte som stöd</li>
+    </ul>
+
+    <h2><span class="emoji">📋</span>Checklista innan du börjar</h2>
+    <ul class="checklist">
+        <li>Har du presenterat verktyget positivt för klassen?</li>
+        <li>Har du betonat att det mäter gruppen, inte individer?</li>
+        <li>Har du valt rätt fasläge för aktiviteten?</li>
+        <li>Har du en plan för testperiod + klassröstning?</li>
+        <li>Vet du hur du stänger av om det behövs?</li>
+    </ul>
+
+    <h2><span class="emoji">🔒</span>Integritet och GDPR</h2>
+    <p>Ljudmonitor samlar <strong>ingen persondata</strong>. Det finns ingen individidentifiering, ingen inspelning,
+        ingen extern dataöverföring och inget som sparas mellan sessioner.</p>
+    <p>Om du vill informera vårdnadshavare, här är en förslag till text:</p>
+    <div class="card">
+        <h3>Mall för föräldramöte/veckobrev</h3>
+        <p><em>"I klassrummet använder vi ett digitalt verktyg som visar klassens gemensamma ljudnivå i realtid —
+                ungefär som en termometer. Inga röster spelas in, ingen data sparas och enskilda elever identifieras
+                inte. Klassen har varit med och bestämt att vi ska använda det."</em></p>
+    </div>
+
+    <a href="index.html" class="back-link">← Tillbaka till Ljudmonitor</a>
+
+    <footer>
+        Ljudmonitor v2.8 — Del av GAIA Klassrumsverktyg
+    </footer>
+</body>
+
+</html>

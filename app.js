@@ -1,5 +1,5 @@
 // ============================================================
-// LJUDMONITOR v2.7 — App Logic
+// LJUDMONITOR v2.8 — App Logic
 // ============================================================
 
 // ---- STATE ----
@@ -31,12 +31,14 @@ const DANGER_FALL = 0.15;  // How fast danger falls (slower = more forgiving)
 
 // Student stat — VEP consensus: rotate variants, update on state change only
 let lastStatState = null;  // 'good' | 'ok' | 'warn' | 'aurora' | 'break'
+let projectorMode = false;  // VEP v2.8: reduced visual mode
 const STAT_MSGS = {
     good: ['Ni håller stilen ✓', 'Stark nivå ✓', 'Fint jobbat ✓'],
     ok: ['{t} — fortsätt', 'Nästan där — {t}'],
     warn: ['Lite högt just nu', 'Högt — ni kan bättre'],
     aurora: ['✓'],
-    break: ['Ny chans — kör!']
+    break: ['Ny chans — kör!'],
+    discussion_good: ['Bra diskussionsnivå ✓', 'Lagom samtalston ✓']
 };
 
 // Streak
@@ -394,7 +396,9 @@ function updateStats(level) {
             const t = elapsedMin >= 1
                 ? Math.max(0, Math.round(elapsedMin * calmPct)) + ' av ' + elapsedMin + ' min'
                 : Math.max(0, Math.round(elapsedSec * calmPct)) + ' av ' + elapsedSec + ' sek';
-            const variants = STAT_MSGS[newState];
+            // VEP v2.8: use discussion-specific messages in discussion phase
+            const msgKey = (newState === 'good' && currentPhase === 'discussion') ? 'discussion_good' : newState;
+            const variants = STAT_MSGS[msgKey];
             const pick = variants[Math.floor(Math.random() * variants.length)];
             fsStudentStat.textContent = pick.replace('{t}', t);
             fsStudentStat.className = 'fs-student-stat stat-' + newState;
@@ -625,6 +629,13 @@ function setPhase(phase) {
         if (phase === 'quiet') fsIndicator.classList.add('phase-quiet');
         if (phase === 'lecture') fsIndicator.classList.add('phase-lecture');
         if (phase === 'discussion') fsIndicator.classList.add('phase-discussion');
+    }
+
+    // VEP v2.8: Toggle discussion class on fullscreen-view for blue identity
+    const fsView = $('fullscreenView');
+    if (fsView) {
+        fsView.classList.remove('phase-discussion');
+        if (phase === 'discussion') fsView.classList.add('phase-discussion');
     }
 
     drawGraph();
@@ -945,6 +956,25 @@ function enterFullscreen() {
     const fsLabel = $('fsStartLabel');
     if (fsLabel) fsLabel.textContent = isRecording ? 'Stoppa' : 'Starta';
     document.documentElement.requestFullscreen?.();
+    // VEP v2.8: auto-fade header after 3s
+    const fsHeader = document.querySelector('.fs-header');
+    if (fsHeader) {
+        fsHeader.classList.remove('faded');
+        setTimeout(() => fsHeader.classList.add('faded'), 3000);
+    }
+    // Apply discussion class if already in discussion phase
+    if (currentPhase === 'discussion') {
+        $('fullscreenView').classList.add('phase-discussion');
+    }
+}
+
+// VEP v2.8: Projector mode toggle
+function toggleProjectorMode() {
+    projectorMode = !projectorMode;
+    const fsView = $('fullscreenView');
+    const btn = $('fsProjectorToggle');
+    if (fsView) fsView.classList.toggle('projector-mode', projectorMode);
+    if (btn) btn.classList.toggle('active', projectorMode);
 }
 function exitFullscreen() {
     $('fullscreenView').classList.add('hidden');
