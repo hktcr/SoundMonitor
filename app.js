@@ -29,6 +29,16 @@ let dangerLevel = 0;
 const DANGER_RISE = 0.4;   // How fast danger rises
 const DANGER_FALL = 0.15;  // How fast danger falls (slower = more forgiving)
 
+// Student stat — VEP consensus: rotate variants, update on state change only
+let lastStatState = null;  // 'good' | 'ok' | 'warn' | 'aurora' | 'break'
+const STAT_MSGS = {
+    good: ['Ni håller stilen ✓', 'Stark nivå ✓', 'Fint jobbat ✓'],
+    ok: ['{t} — fortsätt', 'Nästan där — {t}'],
+    warn: ['Lite högt just nu', 'Högt — ni kan bättre'],
+    aurora: ['✓'],
+    break: ['Ny chans — kör!']
+};
+
 // Streak
 let streakStart = null, streakActive = false, bestStreak = 0;
 let graceTimeout = null, streakBroken = false;
@@ -177,6 +187,7 @@ async function startRecording() {
 
         isRecording = true;
         sessionStartTime = Date.now();
+        lastStatState = null;
         sessionPhaseLog = [];
         if (currentPhase !== 'none') sessionPhaseLog.push({ phase: currentPhase, start: Date.now() });
 
@@ -371,28 +382,25 @@ function updateStats(level) {
         $('fsStatOver').className = 'fs-stat-value' + (overPct > 30 ? ' highlight-red' : overPct > 10 ? ' highlight-orange' : ' highlight-green');
     }
 
-    // S4: Student-friendly stat (personal, encouraging)
+    // S4: Student stat — VEP consensus: update only on state change, rotate variants
     const fsStudentStat = $('fsStudentStat');
     if (fsStudentStat && sessionStartTime) {
-        const elapsedSec = Math.floor((Date.now() - sessionStartTime) / 1000);
-        const elapsedMin = Math.floor(elapsedSec / 60);
         const calmPct = 1 - overPct / 100;
-        const t = elapsedMin >= 1
-            ? Math.max(0, Math.round(elapsedMin * calmPct)) + ' av ' + elapsedMin + ' min'
-            : Math.max(0, Math.round(elapsedSec * calmPct)) + ' av ' + elapsedSec + ' sek';
-        let msg, cls;
-        if (calmPct >= 0.7) {
-            msg = `Ni är grymma! ${t} ✓`;
-            cls = ' stat-good';
-        } else if (calmPct >= 0.4) {
-            msg = `Det går bra — ${t}`;
-            cls = ' stat-ok';
-        } else {
-            msg = `Lite högt — sänk lite så fixar ni det!`;
-            cls = ' stat-warn';
+        const newState = calmPct >= 0.7 ? 'good' : calmPct >= 0.4 ? 'ok' : 'warn';
+        // Only update text on state change (not every sample)
+        if (newState !== lastStatState && lastStatState !== 'aurora' && lastStatState !== 'break') {
+            const elapsedSec = Math.floor((Date.now() - sessionStartTime) / 1000);
+            const elapsedMin = Math.floor(elapsedSec / 60);
+            const t = elapsedMin >= 1
+                ? Math.max(0, Math.round(elapsedMin * calmPct)) + ' av ' + elapsedMin + ' min'
+                : Math.max(0, Math.round(elapsedSec * calmPct)) + ' av ' + elapsedSec + ' sek';
+            const variants = STAT_MSGS[newState];
+            const pick = variants[Math.floor(Math.random() * variants.length)];
+            fsStudentStat.textContent = pick.replace('{t}', t);
+            fsStudentStat.className = 'fs-student-stat stat-' + newState;
+            fsStudentStat.style.opacity = '1';
+            lastStatState = newState;
         }
-        fsStudentStat.textContent = msg;
-        fsStudentStat.className = 'fs-student-stat' + cls;
     }
 }
 
@@ -414,6 +422,17 @@ function handleStreakBreak() {
             streakDisplay.classList.remove('on-fire');
             document.body.classList.remove('aurora-active');
             stopAurora();
+            // VEP: Show streak-break encouragement
+            const fsStat = $('fsStudentStat');
+            if (fsStat) {
+                const bvariants = STAT_MSGS.break;
+                fsStat.textContent = bvariants[Math.floor(Math.random() * bvariants.length)];
+                fsStat.className = 'fs-student-stat stat-warn';
+                fsStat.style.opacity = '1';
+                lastStatState = 'break';
+                // Clear break message after 3s so normal stat resumes
+                setTimeout(() => { if (lastStatState === 'break') lastStatState = null; }, 3000);
+            }
         }
     }, GRACE_MS);
 }
@@ -466,10 +485,20 @@ function updateStreakDisplay() {
         const intensity = Math.min(1, (sec - 10) / 110);
         updateAurora(intensity);
         document.body.classList.add('aurora-active');
+        // VEP: Hide stat text during aurora — aurora IS the reward
+        const fsStat2 = $('fsStudentStat');
+        if (fsStat2 && lastStatState !== 'aurora') {
+            fsStat2.textContent = '✓';
+            fsStat2.className = 'fs-student-stat stat-good';
+            fsStat2.style.opacity = '0.5';
+            lastStatState = 'aurora';
+        }
     } else {
         streakDisplay.classList.remove('on-fire');
         document.body.classList.remove('aurora-active');
         auroraIntensity = 0;
+        // VEP: Restore stat visibility when aurora deactivates
+        if (lastStatState === 'aurora') lastStatState = null;
     }
 
     // Best streak display
