@@ -371,21 +371,22 @@ function updateStats(level) {
         $('fsStatOver').className = 'fs-stat-value' + (overPct > 30 ? ' highlight-red' : overPct > 10 ? ' highlight-orange' : ' highlight-green');
     }
 
-    // S4: Student-friendly stat (positive framing)
+    // S4: Student-friendly stat (trend-aware, non-judgmental)
     const fsStudentStat = $('fsStudentStat');
     if (fsStudentStat && sessionStartTime) {
         const elapsedSec = Math.floor((Date.now() - sessionStartTime) / 1000);
         const elapsedMin = Math.floor(elapsedSec / 60);
         const calmPct = 1 - overPct / 100;
+        const prefix = calmPct >= 0.7 ? 'Bra nivå' : calmPct >= 0.4 ? 'Ok nivå' : 'Hög nivå';
+        const cls = calmPct >= 0.7 ? ' stat-good' : calmPct >= 0.4 ? ' stat-ok' : ' stat-warn';
         if (elapsedMin >= 1) {
             const calmMin = Math.max(0, Math.round(elapsedMin * calmPct));
-            fsStudentStat.textContent = `Bra nivå ${calmMin} av ${elapsedMin} min`;
-            fsStudentStat.className = 'fs-student-stat' + (calmPct >= 0.7 ? ' stat-good' : calmPct >= 0.4 ? ' stat-ok' : ' stat-warn');
+            fsStudentStat.textContent = `${prefix} — ${calmMin} av ${elapsedMin} min`;
         } else {
             const calmSec = Math.max(0, Math.round(elapsedSec * calmPct));
-            fsStudentStat.textContent = `Bra nivå ${calmSec} av ${elapsedSec} sek`;
-            fsStudentStat.className = 'fs-student-stat' + (calmPct >= 0.7 ? ' stat-good' : calmPct >= 0.4 ? ' stat-ok' : ' stat-warn');
+            fsStudentStat.textContent = `${prefix} — ${calmSec} av ${elapsedSec} sek`;
         }
+        fsStudentStat.className = 'fs-student-stat' + cls;
     }
 }
 
