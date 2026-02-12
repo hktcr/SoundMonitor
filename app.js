@@ -604,7 +604,7 @@ function setPhase(phase) {
         threshold = pt;
         // Show threshold hint
         if (thresholdHint) {
-            thresholdHint.textContent = PHASE_LABELS[phase] + ': tröskel ' + pt + ' dB';
+            thresholdHint.textContent = PHASE_LABELS[phase] + ': tröskel ' + pt;
             thresholdHint.classList.add('visible');
             setTimeout(() => thresholdHint.classList.remove('visible'), 3000);
         }
@@ -621,7 +621,7 @@ function setPhase(phase) {
     if (fsIndicator) {
         const label = PHASE_LABELS[phase] || 'Ingen fas';
         const et = getEffectiveThreshold();
-        const thresholdText = et ? `Mål: under ${et} dB` : 'Ingen tröskel';
+        const thresholdText = et ? `Mål: under ${et}` : 'Ingen tröskel';
 
         fsIndicator.querySelector('.fs-phase-label').textContent = label.toUpperCase();
         fsIndicator.querySelector('.fs-threshold-hint').textContent = thresholdText;
@@ -836,7 +836,7 @@ function drawFullscreenGraph() {
         ctx.strokeStyle = 'rgba(239,68,68,0.9)'; ctx.lineWidth = 3;
         ctx.setLineDash([10, 10]); ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(w, ty); ctx.stroke(); ctx.setLineDash([]);
         ctx.fillStyle = 'rgba(239,68,68,0.9)'; ctx.font = 'bold 16px Inter, sans-serif'; ctx.textAlign = 'right';
-        ctx.fillText('Tröskel: ' + et + ' dB', w - 12, ty - 10); ctx.textAlign = 'left';
+        ctx.fillText('Tröskel: ' + et, w - 12, ty - 10); ctx.textAlign = 'left';
     }
 }
 
@@ -932,9 +932,9 @@ async function calibrate() {
         if (tunePanel) tunePanel.classList.add('visible');
 
         calibrationMsg.innerHTML = `✓ Kalibrerad! Föreslagna trösklar:<br>
-            Tyst arbete: ${suggested.quiet} dB | 
-            Genomgång: ${suggested.lecture} dB | 
-            Diskussion: ${suggested.discussion} dB`;
+            Tyst arbete: ${suggested.quiet} | 
+            Genomgång: ${suggested.lecture} | 
+            Diskussion: ${suggested.discussion}`;
         calibrationMsg.className = 'calibration-msg success';
         resetStats();
     }
@@ -1169,9 +1169,9 @@ function updateTuneDisplays() {
     const lVal = (PHASE_THRESHOLDS.lecture + phaseAdjustments.lecture);
     const dVal = (PHASE_THRESHOLDS.discussion + phaseAdjustments.discussion);
 
-    if (tuneQuietValue) tuneQuietValue.textContent = qVal + ' dB';
-    if (tuneLectureValue) tuneLectureValue.textContent = lVal + ' dB';
-    if (tuneDiscussionValue) tuneDiscussionValue.textContent = dVal + ' dB';
+    if (tuneQuietValue) tuneQuietValue.textContent = qVal;
+    if (tuneLectureValue) tuneLectureValue.textContent = lVal;
+    if (tuneDiscussionValue) tuneDiscussionValue.textContent = dVal;
 
     // Update Fullscreen displays
     if ($('fsVal-quiet')) $('fsVal-quiet').textContent = phaseAdjustments.quiet > 0 ? '+' + phaseAdjustments.quiet : phaseAdjustments.quiet;

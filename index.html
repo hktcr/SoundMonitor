@@ -33,7 +33,7 @@
                     <div class="vu-ring" id="vuRing"></div>
                     <div class="vu-inner">
                         <span class="vu-value" id="vuValue">—</span>
-                        <span class="vu-label">Relativ <span class="vu-unit">dB</span></span>
+                        <span class="vu-label">Relativ <span class="vu-unit">ljudnivå</span></span>
                     </div>
                 </div>
                 <div class="stats-streak-col">
@@ -106,17 +106,17 @@
                 <div class="tune-item">
                     <span class="tune-label">Tyst arbete</span>
                     <input type="range" id="tuneQuiet" min="-10" max="10" value="0" step="1">
-                    <span class="tune-value" id="tuneQuietValue">35 dB</span>
+                    <span class="tune-value" id="tuneQuietValue">35</span>
                 </div>
                 <div class="tune-item">
                     <span class="tune-label">Genomgång</span>
                     <input type="range" id="tuneLecture" min="-10" max="10" value="0" step="1">
-                    <span class="tune-value" id="tuneLectureValue">50 dB</span>
+                    <span class="tune-value" id="tuneLectureValue">50</span>
                 </div>
                 <div class="tune-item">
                     <span class="tune-label">Diskussion</span>
                     <input type="range" id="tuneDiscussion" min="-10" max="10" value="0" step="1">
-                    <span class="tune-value" id="tuneDiscussionValue">60 dB</span>
+                    <span class="tune-value" id="tuneDiscussionValue">60</span>
                 </div>
             </div>
         </div>
@@ -142,7 +142,7 @@
         <div class="card">
             <div class="controls-grid">
                 <div class="control-group">
-                    <span class="control-label">Tröskel (relativ dB)</span>
+                    <span class="control-label">Tröskel (ljudnivå)</span>
                     <div class="slider-container">
                         <input type="range" id="thresholdSlider" min="1" max="100" value="50">
                         <span class="slider-value" id="thresholdValue">50</span>
@@ -258,7 +258,7 @@
                 <div class="fs-student-stat" id="fsStudentStat">Mätning startar...</div>
                 <div class="fs-current-level" id="fsCurrentLevel">
                     <span class="fs-current-value" id="fsCurrentValue">—</span>
-                    <span class="fs-current-unit">dB</span>
+                    <span class="fs-current-unit"></span>
                 </div>
                 <!-- Bottom: Thin graph strip -->
                 <div class="fs-graph-strip">
