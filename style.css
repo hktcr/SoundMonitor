@@ -1061,12 +1061,13 @@ footer a {
     align-items: stretch;
     justify-content: center;
     opacity: 0.08;
-    transition: opacity 0.4s ease;
+    transition: opacity 0.4s ease 0.2s;
 }
 
 .fs-sidebar:hover,
 .fs-sidebar.expanded {
     opacity: 1;
+    transition-delay: 0s;
 }
 
 /* Fullscreen Adjust Panel */
@@ -1536,7 +1537,7 @@ body.aurora-active .fs-streak-icon-img {
 }
 
 .fullscreen-view.projector-mode .fs-header {
-    opacity: 0.3;
+    opacity: 0.6;
 }
 
 .fullscreen-view.projector-mode .fs-phase-indicator {

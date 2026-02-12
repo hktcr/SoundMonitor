@@ -33,12 +33,12 @@ const DANGER_FALL = 0.15;  // How fast danger falls (slower = more forgiving)
 let lastStatState = null;  // 'good' | 'ok' | 'warn' | 'aurora' | 'break'
 let projectorMode = false;  // VEP v2.8: reduced visual mode
 const STAT_MSGS = {
-    good: ['Ni håller stilen ✓', 'Stark nivå ✓', 'Fint jobbat ✓'],
+    good: ['Lugn nivå ✓', 'Stark nivå ✓', 'Stabilt ✓'],
     ok: ['{t} — fortsätt', 'Nästan där — {t}'],
-    warn: ['Lite högt just nu', 'Högt — ni kan bättre'],
+    warn: ['Lite högt just nu', 'Högt just nu — prova sänka'],
     aurora: ['✓'],
-    break: ['Ny chans — kör!'],
-    discussion_good: ['Bra diskussionsnivå ✓', 'Lagom samtalston ✓']
+    break: ['Ny chans — kör!', 'Börja om — ni fixar det!', 'Reset — kör igen!'],
+    discussion_good: ['Bra diskussionsnivå ✓', 'Lagom samtalston ✓', 'Produktivt samtal ✓']
 };
 
 // Streak
@@ -473,13 +473,15 @@ function updateStreakDisplay() {
     const ring = $('fsStreakRing');
     if (ring) {
         const circumference = 565.5; // 2π × 90
+        // VEP: use discussion-blue when in discussion phase
+        const ringColor = currentPhase === 'discussion' ? 'var(--discussion-blue)' : 'var(--green)';
         if (sec < 10) {
             const progress = sec / 10;
             ring.style.strokeDashoffset = circumference * (1 - progress);
-            ring.style.stroke = 'var(--green)';
+            ring.style.stroke = ringColor;
         } else {
             ring.style.strokeDashoffset = '0';
-            ring.style.stroke = 'var(--aurora, #22c55e)';
+            ring.style.stroke = ringColor;
         }
     }
 
@@ -494,7 +496,7 @@ function updateStreakDisplay() {
         if (fsStat2 && lastStatState !== 'aurora') {
             fsStat2.textContent = '✓';
             fsStat2.className = 'fs-student-stat stat-good';
-            fsStat2.style.opacity = '0.5';
+            fsStat2.style.opacity = '0.35';
             lastStatState = 'aurora';
         }
     } else {
@@ -636,6 +638,13 @@ function setPhase(phase) {
     if (fsView) {
         fsView.classList.remove('phase-discussion');
         if (phase === 'discussion') fsView.classList.add('phase-discussion');
+    }
+
+    // VEP: Re-fade header after showing phase change
+    const fsHeader = document.querySelector('.fs-header');
+    if (fsHeader) {
+        fsHeader.classList.remove('faded');
+        setTimeout(() => fsHeader.classList.add('faded'), 3000);
     }
 
     drawGraph();
@@ -966,16 +975,25 @@ function enterFullscreen() {
     if (currentPhase === 'discussion') {
         $('fullscreenView').classList.add('phase-discussion');
     }
+    // VEP: Restore projector mode if persisted
+    if (projectorMode) {
+        $('fullscreenView').classList.add('projector-mode');
+        const btn = $('fsProjectorToggle');
+        if (btn) btn.classList.add('active');
+    }
 }
 
-// VEP v2.8: Projector mode toggle
+// VEP v2.8: Projector mode toggle (persisted in localStorage)
 function toggleProjectorMode() {
     projectorMode = !projectorMode;
     const fsView = $('fullscreenView');
     const btn = $('fsProjectorToggle');
     if (fsView) fsView.classList.toggle('projector-mode', projectorMode);
     if (btn) btn.classList.toggle('active', projectorMode);
+    try { localStorage.setItem('sm_projectorMode', projectorMode ? '1' : '0'); } catch (e) { }
 }
+// Restore projector mode on load
+try { projectorMode = localStorage.getItem('sm_projectorMode') === '1'; } catch (e) { }
 function exitFullscreen() {
     $('fullscreenView').classList.add('hidden');
     $('mainView').classList.remove('hidden');
