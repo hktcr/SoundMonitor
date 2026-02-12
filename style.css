@@ -1580,3 +1580,113 @@ body.aurora-active .fs-streak-icon-img {
     border-color: var(--discussion-blue);
     color: var(--discussion-blue);
 }
+
+/* ---- SESSION SUMMARY OVERLAY ---- */
+.fs-session-summary {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    animation: summaryFadeIn 0.4s ease;
+}
+
+@keyframes summaryFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.fs-session-summary.hidden {
+    display: none;
+}
+
+.fs-summary-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.fs-summary-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 4px;
+}
+
+.fs-summary-duration {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.fs-summary-graph-wrap {
+    width: 100%;
+    max-width: 1200px;
+    height: 300px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(15, 20, 35, 0.6);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+.fs-summary-canvas {
+    width: 100%;
+    height: 100%;
+}
+
+.fs-summary-stats {
+    display: flex;
+    gap: 32px;
+    margin-top: 20px;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.fs-summary-stats .summary-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+
+.fs-summary-stats .summary-stat-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.fs-summary-close {
+    margin-top: 28px;
+    padding: 12px 32px;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.fs-summary-close:hover {
+    background: rgba(99, 102, 241, 0.25);
+}
+
+/* Projector mode: show session overview strip */
+.fullscreen-view.projector-mode .fs-graph-strip {
+    display: block;
+    position: absolute;
+    bottom: 60px;
+    left: 40px;
+    right: 40px;
+    height: 60px;
+    opacity: 0.6;
+}

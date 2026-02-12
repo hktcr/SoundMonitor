@@ -17,8 +17,11 @@ let phaseMarkers = [];
 
 const PHASE_TO_ID = { none: 0, lecture: 1, quiet: 2, discussion: 3 };
 const ID_TO_PHASE = ['none', 'lecture', 'quiet', 'discussion'];
-let threshold = 50, calibrationOffset = 0;  // Lowered from 65 to 50 dB
+let threshold = 50, calibrationOffset = 0;  // Lowered from 65 to 50
 let peakLevel = 0, totalSamples = 0, totalSum = 0, overThresholdCount = 0;
+
+// Full session history (unbounded — stores every sample for session overview)
+let sessionFullHistory = [];
 
 // EMA filter for smooth display
 const EMA_ALPHA = 0.3;
@@ -191,6 +194,7 @@ async function startRecording() {
         sessionStartTime = Date.now();
         lastStatState = null;
         sessionPhaseLog = [];
+        sessionFullHistory = [];  // Reset full session history
         if (currentPhase !== 'none') sessionPhaseLog.push({ phase: currentPhase, start: Date.now() });
 
         startBtn.classList.add('active');
@@ -243,8 +247,11 @@ function stopRecording() {
         localStorage.setItem('soundmonitor_best_streak', bestStreak.toString());
     }
 
-    // Exit fullscreen if active
-    if (!$('fullscreenView').classList.contains('hidden')) {
+    // Show session summary in fullscreen, or exit if in main view
+    const fsView = $('fullscreenView');
+    if (fsView && !fsView.classList.contains('hidden') && sessionData && sessionData.totalSamples > 5) {
+        showSessionSummaryGraph();
+    } else if (fsView && !fsView.classList.contains('hidden')) {
         exitFullscreen();
     }
 
@@ -286,6 +293,9 @@ function sampleVolume() {
 
     historyIndex = (historyIndex + 1) % HISTORY_LENGTH;
     if (historyCount < HISTORY_LENGTH) historyCount++;
+
+    // Full session history — store every sample for overview graph
+    sessionFullHistory.push({ level: smoothedLevel, phase: currentPhase, time: Date.now() });
 
     totalSamples++; totalSum += level;
     if (level > peakLevel) peakLevel = level;
@@ -748,6 +758,12 @@ function drawFullscreenGraph() {
     const canvas = $('fsGraphCanvas');
     if (!canvas) return;
 
+    // In projector mode, draw session overview instead of rolling window
+    if (projectorMode && sessionFullHistory.length >= 2) {
+        drawSessionOverviewGraph(canvas, sessionFullHistory);
+        return;
+    }
+
     const ctx = canvas.getContext('2d');
     const w = canvas.width = canvas.getBoundingClientRect().width;
     const h = canvas.height = canvas.getBoundingClientRect().height;
@@ -840,7 +856,140 @@ function drawFullscreenGraph() {
     }
 }
 
+// ---- SESSION OVERVIEW GRAPH (renders entire session) ----
+function drawSessionOverviewGraph(canvas, data, thresholdVal) {
+    if (!canvas || !data || data.length < 2) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width = canvas.getBoundingClientRect().width * (window.devicePixelRatio || 1);
+    const h = canvas.height = canvas.getBoundingClientRect().height * (window.devicePixelRatio || 1);
+    ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+    const dw = canvas.getBoundingClientRect().width;
+    const dh = canvas.getBoundingClientRect().height;
+    ctx.clearRect(0, 0, dw, dh);
 
+    const et = thresholdVal || getEffectiveThreshold() || 50;
+
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = (i / 4) * dh;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(dw, y); ctx.stroke();
+    }
+
+    // Phase background zones
+    const xStep = dw / (data.length - 1);
+    let lastPhase = data[0].phase;
+    let zoneStart = 0;
+    for (let i = 1; i <= data.length; i++) {
+        const p = i < data.length ? data[i].phase : null;
+        if (p !== lastPhase || i === data.length) {
+            if (lastPhase !== 'none' && PHASE_COLORS[lastPhase]) {
+                const x1 = zoneStart * xStep;
+                const x2 = (i - 1) * xStep + xStep;
+                ctx.fillStyle = PHASE_COLORS[lastPhase].bg;
+                ctx.fillRect(x1, 0, x2 - x1, dh);
+            }
+            zoneStart = i; lastPhase = p;
+        }
+    }
+
+    // Fill area
+    const gradient = ctx.createLinearGradient(0, 0, 0, dh);
+    gradient.addColorStop(0, 'rgba(99,102,241,0.25)');
+    gradient.addColorStop(1, 'rgba(99,102,241,0.0)');
+    ctx.beginPath(); ctx.moveTo(0, dh);
+    for (let i = 0; i < data.length; i++) {
+        const x = i * xStep;
+        const y = dh - (data[i].level / 100) * dh;
+        if (i === 0) ctx.lineTo(x, y);
+        else {
+            const px = (i - 1) * xStep;
+            const py = dh - (data[i - 1].level / 100) * dh;
+            const cpx = (px + x) / 2;
+            ctx.bezierCurveTo(cpx, py, cpx, y, x, y);
+        }
+    }
+    ctx.lineTo((data.length - 1) * xStep, dh); ctx.closePath();
+    ctx.fillStyle = gradient; ctx.fill();
+
+    // Line segments
+    for (let i = 1; i < data.length; i++) {
+        const x1 = (i - 1) * xStep, y1 = dh - (data[i - 1].level / 100) * dh;
+        const x2 = i * xStep, y2 = dh - (data[i].level / 100) * dh;
+        const val = data[i].level;
+        ctx.strokeStyle = val > et ? 'rgba(239,68,68,0.9)' : val > et * 0.8 ? 'rgba(245,158,11,0.9)' : 'rgba(99,102,241,0.9)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(x1, y1);
+        ctx.bezierCurveTo((x1 + x2) / 2, y1, (x1 + x2) / 2, y2, x2, y2);
+        ctx.stroke();
+    }
+
+    // Threshold line
+    const ty = dh - (et / 100) * dh;
+    ctx.strokeStyle = 'rgba(239,68,68,0.7)'; ctx.lineWidth = 2;
+    ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(dw, ty); ctx.stroke(); ctx.setLineDash([]);
+
+    // Time labels
+    if (data.length > 10) {
+        const sessionStart = data[0].time;
+        const sessionEnd = data[data.length - 1].time;
+        const totalMs = sessionEnd - sessionStart;
+        ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '11px Inter, sans-serif'; ctx.textBaseline = 'bottom';
+        const numLabels = Math.min(6, Math.floor(dw / 100));
+        for (let i = 0; i <= numLabels; i++) {
+            const frac = i / numLabels;
+            const ms = frac * totalMs;
+            const mins = Math.floor(ms / 60000);
+            const secs = Math.floor((ms % 60000) / 1000);
+            const label = mins + ':' + String(secs).padStart(2, '0');
+            const x = frac * dw;
+            ctx.textAlign = i === 0 ? 'left' : i === numLabels ? 'right' : 'center';
+            ctx.fillText(label, x, dh - 4);
+        }
+    }
+}
+
+function showSessionSummaryGraph() {
+    const overlay = $('fsSessionSummary');
+    if (!overlay) return;
+    overlay.classList.remove('hidden');
+
+    // Duration
+    const durEl = $('fsSummaryDuration');
+    if (durEl && sessionStartTime) {
+        const elapsed = Date.now() - sessionStartTime;
+        const mins = Math.floor(elapsed / 60000);
+        const secs = Math.floor((elapsed % 60000) / 1000);
+        durEl.textContent = `Total tid: ${mins}:${String(secs).padStart(2, '0')}`;
+    }
+
+    // Stats
+    const statsEl = $('fsSummaryStats');
+    if (statsEl && totalSamples > 0) {
+        const avg = totalSum / totalSamples;
+        const overPct = (overThresholdCount / totalSamples * 100).toFixed(0);
+        const bestSec = Math.floor(bestStreak / 1000);
+        const bm = Math.floor(bestSec / 60), bs = bestSec % 60;
+        statsEl.innerHTML = `
+            <div class="summary-stat"><span class="summary-stat-value">${avg.toFixed(0)}</span>Snitt</div>
+            <div class="summary-stat"><span class="summary-stat-value">${peakLevel.toFixed(0)}</span>Topp</div>
+            <div class="summary-stat"><span class="summary-stat-value">${overPct}%</span>Över tröskel</div>
+            <div class="summary-stat"><span class="summary-stat-value">${bm}:${String(bs).padStart(2, '0')}</span>Bästa streak</div>
+        `;
+    }
+
+    // Draw graph after a tick so canvas dimensions are available
+    requestAnimationFrame(() => {
+        const canvas = $('fsSummaryCanvas');
+        drawSessionOverviewGraph(canvas, sessionFullHistory);
+    });
+}
+
+function closeSessionSummary() {
+    const overlay = $('fsSessionSummary');
+    if (overlay) overlay.classList.add('hidden');
+    exitFullscreen();
+}
 function drawThresholdLine(w, h) {
     const et = getEffectiveThreshold();
     const ty = h - (et / 100) * h;

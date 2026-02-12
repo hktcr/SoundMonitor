@@ -326,6 +326,19 @@
             <button class="fs-projector-toggle" id="fsProjectorToggle" onclick="toggleProjectorMode()">
                 📺 PROJEKTORLÄGE
             </button>
+
+            <!-- Session summary overlay (shown on stop) -->
+            <div class="fs-session-summary hidden" id="fsSessionSummary">
+                <div class="fs-summary-header">
+                    <h2 class="fs-summary-title">Sessionsöversikt</h2>
+                    <span class="fs-summary-duration" id="fsSummaryDuration"></span>
+                </div>
+                <div class="fs-summary-graph-wrap">
+                    <canvas id="fsSummaryCanvas" class="fs-summary-canvas"></canvas>
+                </div>
+                <div class="fs-summary-stats" id="fsSummaryStats"></div>
+                <button class="fs-summary-close" onclick="closeSessionSummary()">Stäng</button>
+            </div>
         </div>
     </div>
 
